@@ -1,6 +1,6 @@
 import React from 'react';
 import { X, Goal, Handshake, Calendar, MapPin, Trophy } from 'lucide-react';
-import type { Player, Match, MatchPerformance } from '../../types';
+import type { Player, Match } from '../../types';
 import dayjs from 'dayjs';
 import 'dayjs/locale/vi';
 

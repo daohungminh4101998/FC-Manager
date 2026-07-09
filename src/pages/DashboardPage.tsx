@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { Users, Calendar, Goal, Handshake, TrendingUp, ChevronRight, Trophy, Activity } from 'lucide-react';
 import { playerService } from '../services/playerService';
 import { matchService } from '../services/matchService';
-import { attendanceService } from '../services/attendanceService';
 import { performanceService } from '../services/performanceService';
 import type { Player, Match } from '../types';
 import dayjs from 'dayjs';

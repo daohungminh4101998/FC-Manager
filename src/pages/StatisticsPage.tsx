@@ -8,9 +8,9 @@ import type { PlayerStats, Match, MatchPerformance } from '../types';
 import { SearchInput } from '../components/ui/SearchInput';
 import { Badge } from '../components/ui/Badge';
 import { PlayerDetailModal, type DetailTab } from '../components/ui/PlayerDetailModal';
-import { Goal, Handshake, Calendar, XCircle, TrendingUp } from 'lucide-react';
+import { Goal, Handshake, Calendar, XCircle, TrendingUp, X } from 'lucide-react';
 
-type SortKey = 'name' | 'matchesPlayed' | 'matchesAbsent' | 'totalGoals' | 'totalAssists';
+type SortKey = 'name' | 'matchesPlayed' | 'matchesAbsent' | 'totalGoals' | 'totalAssists' | 'totalGoalsConceded';
 
 interface DetailState {
   playerStats: PlayerStats;
@@ -26,7 +26,6 @@ export const StatisticsPage: React.FC = () => {
   const [sortAsc, setSortAsc] = useState(false);
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState<DetailState | null>(null);
-
   const load = useCallback(async () => {
     setLoading(true);
     const [players, allAttendances, perfs, matches] = await Promise.all([
@@ -65,7 +64,12 @@ export const StatisticsPage: React.FC = () => {
         return sum + (pp?.assists || 0);
       }, 0);
 
-      return { player, matchesPlayed, matchesAbsent, totalGoals, totalAssists };
+      const totalGoalsConceded = perfs.reduce((sum, perf) => {
+        const pp = perf.performances.find((p) => p.playerId === player.id);
+        return sum + (pp?.goalsConceded || 0);
+      }, 0);
+
+      return { player, matchesPlayed, matchesAbsent, totalGoals, totalAssists, totalGoalsConceded };
     });
 
     setStats(result);
@@ -237,10 +241,19 @@ export const StatisticsPage: React.FC = () => {
                 </th>
                 <th
                   className="px-5 py-3.5 text-center text-xs font-medium text-white/40 uppercase tracking-wider cursor-pointer hover:text-white/70 transition-colors"
+                  onClick={() => handleSort('totalGoalsConceded')}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    <X className="w-3.5 h-3.5 text-red-400" />
+                    Bàn thua <SortIcon col="totalGoalsConceded" />
+                  </div>
+                </th>
+                <th
+                  className="px-5 py-3.5 text-center text-xs font-medium text-white/40 uppercase tracking-wider cursor-pointer hover:text-white/70 transition-colors"
                   onClick={() => handleSort('totalAssists')}
                 >
                   <div className="flex items-center justify-center gap-1">
-                    <Handshake className="w-3.5 h-3.5" />
+                    <Handshake className="w-3.5 h-3.5 text-purple-400" />
                     Kiến tạo <SortIcon col="totalAssists" />
                   </div>
                 </th>
@@ -298,6 +311,13 @@ export const StatisticsPage: React.FC = () => {
                     )}
                   </td>
 
+                  {/* ── Bàn thua – hiển thị số bàn thua ── */}
+                  <td className="px-5 py-4 text-center">
+                    <span className={s.totalGoalsConceded > 0 ? 'text-red-400 font-semibold' : 'text-white/60'}>
+                      {s.totalGoalsConceded}
+                    </span>
+                  </td>
+
                   {/* ── Kiến tạo – click để xem chi tiết ── */}
                   <td className="px-5 py-4 text-center">
                     {s.totalAssists > 0 ? (
@@ -323,7 +343,7 @@ export const StatisticsPage: React.FC = () => {
         </div>
         <div className="px-5 py-3 border-t border-white/5">
           <p className="text-xs text-white/20">
-            💡 Click vào số bàn thắng hoặc kiến tạo để xem chi tiết từng trận
+            💡 Click vào số bàn thắng, bàn thua hoặc kiến tạo để xem chi tiết từng trận
           </p>
         </div>
       </div>

@@ -51,6 +51,7 @@ export interface PlayerPerformance {
   playerId: string;
   goals: number;
   assists: number;
+  goalsConceded: number;
 }
 
 export interface MatchPerformance {
@@ -68,6 +69,7 @@ export interface PlayerStats {
   matchesAbsent: number;
   totalGoals: number;
   totalAssists: number;
+  totalGoalsConceded: number;
 }
 
 // =====================

@@ -1,19 +1,22 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Save, Goal, Handshake, CheckCircle2 } from 'lucide-react';
-import { matchService } from '../services/matchService';
-import { playerService } from '../services/playerService';
-import { attendanceService } from '../services/attendanceService';
-import { performanceService } from '../services/performanceService';
-import type { Match, Player, PlayerPerformance } from '../types';
-import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
-import { useToast } from '../contexts/ToastContext';
-import dayjs from 'dayjs';
+import React, { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Save, Goal, Handshake, CheckCircle2, X } from "lucide-react";
+import { matchService } from "../services/matchService";
+import { playerService } from "../services/playerService";
+import { attendanceService } from "../services/attendanceService";
+import { performanceService } from "../services/performanceService";
+import type { Match, Player, PlayerPerformance } from "../types";
+import { Button } from "../components/ui/Button";
+import { Badge } from "../components/ui/Badge";
+import { useToast } from "../contexts/ToastContext";
+import dayjs from "dayjs";
 
-type PositionVariant = 'amber' | 'blue' | 'emerald' | 'red';
+type PositionVariant = "amber" | "blue" | "emerald" | "red";
 const positionBadge: Record<string, PositionVariant> = {
-  GK: 'amber', DEF: 'blue', MID: 'emerald', FWD: 'red',
+  GK: "amber",
+  DEF: "blue",
+  MID: "emerald",
+  FWD: "red",
 };
 
 export const PerformancePage: React.FC = () => {
@@ -21,9 +24,13 @@ export const PerformancePage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [matches, setMatches] = useState<Match[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [presentPlayerIds, setPresentPlayerIds] = useState<Set<string>>(new Set());
-  const [selectedMatchId, setSelectedMatchId] = useState<string>('');
-  const [performances, setPerformances] = useState<Map<string, { goals: number; assists: number }>>(new Map());
+  const [presentPlayerIds, setPresentPlayerIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [selectedMatchId, setSelectedMatchId] = useState<string>("");
+  const [performances, setPerformances] = useState<
+    Map<string, { goals: number; assists: number; goalsConceded: number }>
+  >(new Map());
   const [isSaving, setIsSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
 
@@ -37,12 +44,15 @@ export const PerformancePage: React.FC = () => {
     setMatches(pastMatches);
     setPlayers(ps);
 
-    const matchIdFromUrl = searchParams.get('match');
-    const defaultId = matchIdFromUrl || (pastMatches.length > 0 ? pastMatches[0].id : '');
+    const matchIdFromUrl = searchParams.get("match");
+    const defaultId =
+      matchIdFromUrl || (pastMatches.length > 0 ? pastMatches[0].id : "");
     setSelectedMatchId(defaultId);
   }, [searchParams]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   useEffect(() => {
     if (!selectedMatchId) return;
@@ -51,7 +61,9 @@ export const PerformancePage: React.FC = () => {
     attendanceService.getByMatch(selectedMatchId).then((att) => {
       if (att) {
         const presentIds = new Set(
-          att.records.filter((r) => r.status === 'present').map((r) => r.playerId)
+          att.records
+            .filter((r) => r.status === "present")
+            .map((r) => r.playerId),
         );
         setPresentPlayerIds(presentIds);
       } else {
@@ -61,9 +73,18 @@ export const PerformancePage: React.FC = () => {
 
     // Load saved performance
     performanceService.getByMatch(selectedMatchId).then((perf) => {
-      const map = new Map<string, { goals: number; assists: number }>();
+      const map = new Map<
+        string,
+        { goals: number; assists: number; goalsConceded: number }
+      >();
       if (perf) {
-        perf.performances.forEach((p) => map.set(p.playerId, { goals: p.goals, assists: p.assists }));
+        perf.performances.forEach((p) =>
+          map.set(p.playerId, {
+            goals: p.goals,
+            assists: p.assists,
+            goalsConceded: p.goalsConceded ?? 0,
+          }),
+        );
         setSavedAt(perf.savedAt);
       } else {
         setSavedAt(null);
@@ -74,12 +95,16 @@ export const PerformancePage: React.FC = () => {
 
   const updateStat = (
     playerId: string,
-    field: 'goals' | 'assists',
-    value: number
+    field: "goals" | "assists" | "goalsConceded",
+    value: number,
   ) => {
     setPerformances((prev) => {
       const next = new Map(prev);
-      const current = next.get(playerId) || { goals: 0, assists: 0 };
+      const current = next.get(playerId) || {
+        goals: 0,
+        assists: 0,
+        goalsConceded: 0,
+      };
       next.set(playerId, { ...current, [field]: Math.max(0, value) });
       return next;
     });
@@ -91,15 +116,20 @@ export const PerformancePage: React.FC = () => {
     try {
       const perfList: PlayerPerformance[] = [];
       performances.forEach((v, playerId) => {
-        if (v.goals > 0 || v.assists > 0) {
-          perfList.push({ playerId, goals: v.goals, assists: v.assists });
+        if (v.goals > 0 || v.assists > 0 || v.goalsConceded > 0) {
+          perfList.push({
+            playerId,
+            goals: v.goals,
+            assists: v.assists,
+            goalsConceded: v.goalsConceded,
+          });
         }
       });
       const saved = await performanceService.save(selectedMatchId, perfList);
       setSavedAt(saved.savedAt);
-      addToast('Lưu thống kê sau trận thành công!', 'success');
+      addToast("Lưu thống kê sau trận thành công!", "success");
     } catch {
-      addToast('Có lỗi khi lưu!', 'error');
+      addToast("Có lỗi khi lưu!", "error");
     } finally {
       setIsSaving(false);
     }
@@ -108,8 +138,14 @@ export const PerformancePage: React.FC = () => {
   const activePlayers = players.filter((p) => presentPlayerIds.has(p.id));
   const selectedMatch = matches.find((m) => m.id === selectedMatchId);
 
-  const totalGoals = [...performances.values()].reduce((s, v) => s + v.goals, 0);
-  const totalAssists = [...performances.values()].reduce((s, v) => s + v.assists, 0);
+  const totalGoals = [...performances.values()].reduce(
+    (s, v) => s + v.goals,
+    0,
+  );
+  const totalAssists = [...performances.values()].reduce(
+    (s, v) => s + v.assists,
+    0,
+  );
 
   return (
     <div className="space-y-5">
@@ -133,18 +169,20 @@ export const PerformancePage: React.FC = () => {
           >
             {matches.map((m) => (
               <option key={m.id} value={m.id}>
-                vs {m.opponent} — {dayjs(m.date).format('DD/MM/YYYY')}
+                vs {m.opponent} — {dayjs(m.date).format("DD/MM/YYYY")}
               </option>
             ))}
           </select>
         )}
         {selectedMatch && (
           <div className="mt-3 flex flex-wrap gap-3">
-            <span className="text-xs text-white/40">📍 {selectedMatch.venue}</span>
+            <span className="text-xs text-white/40">
+              📍 {selectedMatch.venue}
+            </span>
             {savedAt && (
               <span className="flex items-center gap-1 text-xs text-emerald-400">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                Đã lưu {dayjs(savedAt).format('HH:mm DD/MM')}
+                Đã lưu {dayjs(savedAt).format("HH:mm DD/MM")}
               </span>
             )}
           </div>
@@ -156,11 +194,15 @@ export const PerformancePage: React.FC = () => {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20">
             <Goal className="w-3.5 h-3.5 text-amber-400" />
-            <span className="text-sm text-amber-400 font-medium">{totalGoals} bàn thắng</span>
+            <span className="text-sm text-amber-400 font-medium">
+              {totalGoals} bàn thắng
+            </span>
           </div>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20">
             <Handshake className="w-3.5 h-3.5 text-purple-400" />
-            <span className="text-sm text-purple-400 font-medium">{totalAssists} kiến tạo</span>
+            <span className="text-sm text-purple-400 font-medium">
+              {totalAssists} kiến tạo
+            </span>
           </div>
         </div>
         <Button
@@ -200,13 +242,26 @@ export const PerformancePage: React.FC = () => {
                       Kiến tạo
                     </div>
                   </th>
+                  <th className="px-5 py-3.5 text-center text-xs font-medium text-white/40 uppercase">
+                    <div className="flex items-center justify-center gap-1">
+                      <X className="w-3.5 h-3.5 text-red-400" />
+                      Bàn thua
+                    </div>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
                 {activePlayers.map((player) => {
-                  const perf = performances.get(player.id) || { goals: 0, assists: 0 };
+                  const perf = performances.get(player.id) || {
+                    goals: 0,
+                    assists: 0,
+                    goalsConceded: 0,
+                  };
                   return (
-                    <tr key={player.id} className="hover:bg-white/3 transition-colors">
+                    <tr
+                      key={player.id}
+                      className="hover:bg-white/3 transition-colors"
+                    >
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
@@ -215,8 +270,13 @@ export const PerformancePage: React.FC = () => {
                             </span>
                           </div>
                           <div>
-                            <p className="font-medium text-white">{player.name}</p>
-                            <Badge variant={positionBadge[player.position]} size="sm">
+                            <p className="font-medium text-white">
+                              {player.name}
+                            </p>
+                            <Badge
+                              variant={positionBadge[player.position]}
+                              size="sm"
+                            >
                               {player.position}
                             </Badge>
                           </div>
@@ -225,7 +285,9 @@ export const PerformancePage: React.FC = () => {
                       <td className="px-5 py-4">
                         <div className="flex items-center justify-center gap-2">
                           <button
-                            onClick={() => updateStat(player.id, 'goals', perf.goals - 1)}
+                            onClick={() =>
+                              updateStat(player.id, "goals", perf.goals - 1)
+                            }
                             className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 text-white/50
                               hover:bg-amber-500/10 hover:text-amber-400 hover:border-amber-500/30
                               transition-all text-sm font-bold"
@@ -234,13 +296,17 @@ export const PerformancePage: React.FC = () => {
                           </button>
                           <span
                             className={`w-8 text-center font-bold text-lg ${
-                              perf.goals > 0 ? 'text-amber-400' : 'text-white/30'
+                              perf.goals > 0
+                                ? "text-amber-400"
+                                : "text-white/30"
                             }`}
                           >
                             {perf.goals}
                           </span>
                           <button
-                            onClick={() => updateStat(player.id, 'goals', perf.goals + 1)}
+                            onClick={() =>
+                              updateStat(player.id, "goals", perf.goals + 1)
+                            }
                             className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 text-white/50
                               hover:bg-amber-500/10 hover:text-amber-400 hover:border-amber-500/30
                               transition-all text-sm font-bold"
@@ -252,7 +318,9 @@ export const PerformancePage: React.FC = () => {
                       <td className="px-5 py-4">
                         <div className="flex items-center justify-center gap-2">
                           <button
-                            onClick={() => updateStat(player.id, 'assists', perf.assists - 1)}
+                            onClick={() =>
+                              updateStat(player.id, "assists", perf.assists - 1)
+                            }
                             className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 text-white/50
                               hover:bg-purple-500/10 hover:text-purple-400 hover:border-purple-500/30
                               transition-all text-sm font-bold"
@@ -261,13 +329,17 @@ export const PerformancePage: React.FC = () => {
                           </button>
                           <span
                             className={`w-8 text-center font-bold text-lg ${
-                              perf.assists > 0 ? 'text-purple-400' : 'text-white/30'
+                              perf.assists > 0
+                                ? "text-purple-400"
+                                : "text-white/30"
                             }`}
                           >
                             {perf.assists}
                           </span>
                           <button
-                            onClick={() => updateStat(player.id, 'assists', perf.assists + 1)}
+                            onClick={() =>
+                              updateStat(player.id, "assists", perf.assists + 1)
+                            }
                             className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 text-white/50
                               hover:bg-purple-500/10 hover:text-purple-400 hover:border-purple-500/30
                               transition-all text-sm font-bold"
@@ -276,6 +348,51 @@ export const PerformancePage: React.FC = () => {
                           </button>
                         </div>
                       </td>
+                      {player.position === "GK" ? (
+                        <td className="px-5 py-4">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() =>
+                                updateStat(
+                                  player.id,
+                                  "goalsConceded",
+                                  perf.goalsConceded - 1,
+                                )
+                              }
+                              className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 text-white/50
+                              hover:bg-purple-500/10 hover:text-purple-400 hover:border-purple-500/30
+                              transition-all text-sm font-bold"
+                            >
+                              −
+                            </button>
+                            <span
+                              className={`w-8 text-center font-bold text-lg ${
+                                perf.goalsConceded > 0
+                                  ? "text-red-400"
+                                  : "text-white/30"
+                              }`}
+                            >
+                              {perf.goalsConceded}
+                            </span>
+                            <button
+                              onClick={() =>
+                                updateStat(
+                                  player.id,
+                                  "goalsConceded",
+                                  perf.goalsConceded + 1,
+                                )
+                              }
+                              className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 text-white/50
+                              hover:bg-purple-500/10 hover:text-purple-400 hover:border-purple-500/30
+                              transition-all text-sm font-bold"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </td>
+                      ) : (
+                        ""
+                      )}
                     </tr>
                   );
                 })}
