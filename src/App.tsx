@@ -7,10 +7,14 @@ import { MatchesPage } from "./pages/MatchesPage";
 import { AttendancePage } from "./pages/AttendancePage";
 import { StatisticsPage } from "./pages/StatisticsPage";
 import { PerformancePage } from "./pages/PerformancePage";
+import { useEffect } from "react";
+import { login } from "./services/authService";
 
 // Create a single supabase client for interacting with your database
 function App() {
-  
+  useEffect(() => {
+    login("admin", "123456");
+  }, []);
 
   return (
     <ToastProvider>
