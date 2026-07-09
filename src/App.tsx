@@ -1,14 +1,17 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { ToastProvider } from './contexts/ToastContext';
-import { AppLayout } from './components/layout/AppLayout';
-import { DashboardPage } from './pages/DashboardPage';
-import { PlayersPage } from './pages/PlayersPage';
-import { MatchesPage } from './pages/MatchesPage';
-import { AttendancePage } from './pages/AttendancePage';
-import { StatisticsPage } from './pages/StatisticsPage';
-import { PerformancePage } from './pages/PerformancePage';
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ToastProvider } from "./contexts/ToastContext";
+import { AppLayout } from "./components/layout/AppLayout";
+import { DashboardPage } from "./pages/DashboardPage";
+import { PlayersPage } from "./pages/PlayersPage";
+import { MatchesPage } from "./pages/MatchesPage";
+import { AttendancePage } from "./pages/AttendancePage";
+import { StatisticsPage } from "./pages/StatisticsPage";
+import { PerformancePage } from "./pages/PerformancePage";
 
+// Create a single supabase client for interacting with your database
 function App() {
+  
+
   return (
     <ToastProvider>
       <BrowserRouter>

@@ -1,36 +1,65 @@
-import { mockPlayers } from '../data/mockData';
-import type { Player, PlayerFormData } from '../types';
-import dayjs from 'dayjs';
-
-let players = [...mockPlayers];
-
+import { createClient } from "@supabase/supabase-js";
+import type { Player, PlayerFormData } from "../types";
+const supabase = createClient(
+    "https://fwkwqnqqfxcxivmuivqi.supabase.co",
+    "sb_publishable_RZbh5-WUgOEuectQA5ol-w_lUARtJNp",
+  );
 export const playerService = {
-  getAll: (): Promise<Player[]> => {
-    return Promise.resolve([...players]);
+  
+  async getAll(): Promise<Player[]> {
+    const { data, error } = await supabase
+      .from("players")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    return data ?? [];
   },
 
-  getById: (id: string): Promise<Player | undefined> => {
-    return Promise.resolve(players.find((p) => p.id === id));
+  async getById(id: string): Promise<Player | undefined> {
+    const { data, error } = await supabase
+      .from("players")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (error) throw error;
+
+    return data;
   },
 
-  create: (data: PlayerFormData): Promise<Player> => {
-    const newPlayer: Player = {
-      ...data,
-      id: `p${Date.now()}`,
-      createdAt: dayjs().toISOString(),
-    };
-    players = [...players, newPlayer];
-    return Promise.resolve(newPlayer);
+  async create(data: PlayerFormData): Promise<Player> {
+    const { data: player, error } = await supabase
+      .from("players")
+      .insert(data)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return player;
   },
 
-  update: (id: string, data: PlayerFormData): Promise<Player> => {
-    players = players.map((p) => (p.id === id ? { ...p, ...data } : p));
-    const updated = players.find((p) => p.id === id)!;
-    return Promise.resolve(updated);
+  async update(id: string, data: PlayerFormData): Promise<Player> {
+    const { data: player, error } = await supabase
+      .from("players")
+      .update(data)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return player;
   },
 
-  delete: (id: string): Promise<void> => {
-    players = players.filter((p) => p.id !== id);
-    return Promise.resolve();
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from("players")
+      .delete()
+      .eq("id", id);
+
+    if (error) throw error;
   },
 };
