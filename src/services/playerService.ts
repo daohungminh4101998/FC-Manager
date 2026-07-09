@@ -1,13 +1,10 @@
-import { createClient } from "@supabase/supabase-js";
 import type { Player, PlayerFormData } from "../types";
-const supabase = createClient(
-    "https://fwkwqnqqfxcxivmuivqi.supabase.co",
-    "sb_publishable_RZbh5-WUgOEuectQA5ol-w_lUARtJNp",
-  );
+import { supabaseClient } from "../apis/common";
+
 export const playerService = {
   
   async getAll(): Promise<Player[]> {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from("players")
       .select("*")
       .order("created_at", { ascending: false });
@@ -18,7 +15,7 @@ export const playerService = {
   },
 
   async getById(id: string): Promise<Player | undefined> {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from("players")
       .select("*")
       .eq("id", id)
@@ -30,7 +27,7 @@ export const playerService = {
   },
 
   async create(data: PlayerFormData): Promise<Player> {
-    const { data: player, error } = await supabase
+    const { data: player, error } = await supabaseClient
       .from("players")
       .insert(data)
       .select()
@@ -42,7 +39,7 @@ export const playerService = {
   },
 
   async update(id: string, data: PlayerFormData): Promise<Player> {
-    const { data: player, error } = await supabase
+    const { data: player, error } = await supabaseClient
       .from("players")
       .update(data)
       .eq("id", id)
@@ -55,7 +52,7 @@ export const playerService = {
   },
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .from("players")
       .delete()
       .eq("id", id);
