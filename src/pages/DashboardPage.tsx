@@ -40,7 +40,7 @@ export const DashboardPage: React.FC = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [contributionSummary, setContributionSummary] = useState<ContributionSummary | null>(null);
-  const [contributionLoading, setContributionLoading] = useState(false);
+  const [, setContributionLoading] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -49,17 +49,11 @@ export const DashboardPage: React.FC = () => {
         const [ps, ms, perfs] = await Promise.all([
           playerService.getAll(),
           matchService.getAll(),
-          performanceService.getAll(),
+          performanceService.getAllPerformances(),
         ]);
 
-        const totalGoals = perfs.reduce(
-          (sum, p) => sum + p.performances.reduce((s, pp) => s + pp.goals, 0),
-          0
-        );
-        const totalAssists = perfs.reduce(
-          (sum, p) => sum + p.performances.reduce((s, pp) => s + pp.assists, 0),
-          0
-        );
+        const totalGoals = perfs.reduce((sum, p) => sum + p.goals, 0);
+        const totalAssists = perfs.reduce((sum, p) => sum + p.assists, 0);
 
         setStats({
           totalPlayers: ps.length,
@@ -147,23 +141,22 @@ export const DashboardPage: React.FC = () => {
       </div>
     );
   }
-  console.log(contributionLoading);
   const nextMatch = matches.find((m) => dayjs(m.date).isAfter(dayjs()));
   const recentMatches = matches.filter((m) => !dayjs(m.date).isAfter(dayjs())).slice(0, 4);
 
   return (
     <div className="space-y-6">
       {/* Greeting */}
-      <div className="bg-gradient-to-r from-emerald-500/10 to-green-500/5 border border-emerald-500/15 rounded-2xl p-6">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-green-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-            <Trophy className="w-6 h-6 text-white" />
+      <div className="bg-gradient-to-r from-emerald-500/10 to-green-500/5 border border-emerald-500/15 rounded-2xl p-4 sm:p-6">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-green-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 shrink-0">
+            <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
           </div>
-          <div>
-            <h2 className="text-xl font-bold text-white">
+          <div className="min-w-0">
+            <h2 className="text-lg sm:text-xl font-bold text-white">
               Chào mừng đến FC Manager! ⚽
             </h2>
-            <p className="text-white/50 text-sm mt-0.5">
+            <p className="text-white/50 text-xs sm:text-sm mt-0.5">
               {dayjs().format('dddd, DD tháng MM, YYYY')}
             </p>
           </div>
@@ -172,7 +165,7 @@ export const DashboardPage: React.FC = () => {
 
       {/* Contribution Summary Card */}
       {contributionSummary !== null && (
-        <div className="bg-gray-900/60 border border-white/10 rounded-2xl p-6">
+        <div className="bg-gray-900/60 border border-white/10 rounded-2xl p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Goal className="w-4 h-4 text-emerald-400" />
@@ -180,18 +173,18 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
           <div className="grid grid-cols-1 gap-4 text-white">
-            <div className="flex items-center gap-4 p-3 bg-gray-800/50 rounded-xl">
-              <div className="flex-1">
+            <div className="flex flex-col xs:flex-row gap-3 xs:gap-4 p-3 bg-gray-800/50 rounded-xl">
+              <div className="flex-1 min-w-0">
                 <p className="text-xs text-white/40">Tổng cần thu</p>
-                <p className="text-lg font-bold">{contributionSummary.totalDue.toLocaleString()} vnđ</p>
+                <p className="text-lg font-bold truncate">{contributionSummary.totalDue.toLocaleString()} vnđ</p>
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <p className="text-xs text-white/40">Tổng đã thu</p>
-                <p className="text-lg font-bold text-emerald-400">{contributionSummary.totalPaid.toLocaleString()} vnđ</p>
+                <p className="text-lg font-bold text-emerald-400 truncate">{contributionSummary.totalPaid.toLocaleString()} vnđ</p>
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <p className="text-xs text-white/40">Còn thiếu</p>
-                <p className="text-lg font-bold text-red-400">{contributionSummary.remaining.toLocaleString()} vnđ</p>
+                <p className="text-lg font-bold text-red-400 truncate">{contributionSummary.remaining.toLocaleString()} vnđ</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 text-xs text-white/50">

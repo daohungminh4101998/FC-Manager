@@ -8,6 +8,7 @@ import type { Match, Player, AttendanceRecord, AttendanceStatus } from '../types
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { useToast } from '../contexts/ToastContext';
+import { useAuth } from '../contexts/AuthContext';
 import dayjs from 'dayjs';
 import clsx from 'clsx';
 
@@ -21,6 +22,10 @@ const positionBadge: Record<string, PositionVariant> = {
 
 export const AttendancePage: React.FC = () => {
   const { addToast } = useToast();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'Admin';
+  const isPlayer = user?.role === 'Player';
+  const canEdit = isAdmin || isPlayer;
   const [searchParams, setSearchParams] = useSearchParams();
   const [matches, setMatches] = useState<Match[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
@@ -93,6 +98,7 @@ export const AttendancePage: React.FC = () => {
   const selectedMatch = matches.find((m) => m.id === selectedMatchId);
   const presentCount = [...records.values()].filter((s) => s === 'present').length;
   const absentCount = [...records.values()].filter((s) => s === 'absent').length;
+  const visiblePlayers = isPlayer ? players.filter((p) => p.id === user?.playerId) : players;
 
   return (
     <div className="space-y-5">
@@ -138,7 +144,7 @@ export const AttendancePage: React.FC = () => {
 
       {/* Stats + Actions */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
             <Check className="w-3.5 h-3.5 text-emerald-400" />
             <span className="text-sm text-emerald-400 font-medium">{presentCount} có mặt</span>
@@ -148,26 +154,33 @@ export const AttendancePage: React.FC = () => {
             <span className="text-sm text-red-400 font-medium">{absentCount} vắng mặt</span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="secondary" onClick={() => markAll('present')}>
-            Tất cả có mặt
-          </Button>
-          <Button size="sm" variant="secondary" onClick={() => markAll('absent')}>
-            Tất cả vắng
-          </Button>
-          <Button
-            leftIcon={<Save className="w-4 h-4" />}
-            onClick={handleSave}
-            isLoading={isSaving}
-          >
-            Lưu điểm danh
-          </Button>
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          {isAdmin && (
+            <>
+              <Button size="sm" variant="secondary" onClick={() => markAll('present')}>
+                Tất cả có mặt
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => markAll('absent')}>
+                Tất cả vắng
+              </Button>
+            </>
+          )}
+          {canEdit && (
+            <Button
+              leftIcon={<Save className="w-4 h-4" />}
+              onClick={handleSave}
+              isLoading={isSaving}
+              className="w-full sm:w-auto"
+            >
+              Lưu điểm danh
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Player List */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {players.map((player) => {
+        {visiblePlayers.map((player) => {
           const status = records.get(player.id);
           const isPresent = status === 'present';
           const isAbsent = status === 'absent';
@@ -176,7 +189,7 @@ export const AttendancePage: React.FC = () => {
             <div
               key={player.id}
               className={clsx(
-                'flex items-center gap-4 p-4 rounded-xl border transition-all',
+                'flex items-center gap-3 sm:gap-4 p-4 rounded-xl border transition-all',
                 isPresent && 'bg-emerald-500/5 border-emerald-500/30',
                 isAbsent && 'bg-red-500/5 border-red-500/20',
                 !status && 'bg-gray-900/60 border-white/10'
@@ -207,32 +220,38 @@ export const AttendancePage: React.FC = () => {
                   {player.position}
                 </Badge>
               </div>
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => toggle(player.id, 'present')}
-                  title="Có mặt"
-                  className={clsx(
-                    'w-8 h-8 rounded-lg border flex items-center justify-center transition-all',
-                    isPresent
-                      ? 'bg-emerald-500 border-emerald-500 text-white'
-                      : 'border-white/10 text-white/30 hover:border-emerald-500/50 hover:text-emerald-400'
-                  )}
-                >
-                  <Check className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => toggle(player.id, 'absent')}
-                  title="Vắng mặt"
-                  className={clsx(
-                    'w-8 h-8 rounded-lg border flex items-center justify-center transition-all',
-                    isAbsent
-                      ? 'bg-red-500 border-red-500 text-white'
-                      : 'border-white/10 text-white/30 hover:border-red-500/50 hover:text-red-400'
-                  )}
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+              {canEdit ? (
+                <div className="flex items-center gap-1.5 sm:gap-1.5 shrink-0">
+                  <button
+                    onClick={() => toggle(player.id, 'present')}
+                    title="Có mặt"
+                    className={clsx(
+                      'w-11 h-11 sm:w-9 sm:h-9 rounded-lg border flex items-center justify-center transition-all',
+                      isPresent
+                        ? 'bg-emerald-500 border-emerald-500 text-white'
+                        : 'border-white/10 text-white/30 hover:border-emerald-500/50 hover:text-emerald-400'
+                    )}
+                  >
+                    <Check className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => toggle(player.id, 'absent')}
+                    title="Vắng mặt"
+                    className={clsx(
+                      'w-11 h-11 sm:w-9 sm:h-9 rounded-lg border flex items-center justify-center transition-all',
+                      isAbsent
+                        ? 'bg-red-500 border-red-500 text-white'
+                        : 'border-white/10 text-white/30 hover:border-red-500/50 hover:text-red-400'
+                    )}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <Badge variant={isPresent ? 'emerald' : isAbsent ? 'red' : 'gray'} size="sm">
+                  {isPresent ? 'Có mặt' : isAbsent ? 'Vắng mặt' : 'Chưa điểm danh'}
+                </Badge>
+              )}
             </div>
           );
         })}

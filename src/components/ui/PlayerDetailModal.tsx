@@ -47,7 +47,7 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
   const displayList = activeTab === 'goals' ? goalMatches : assistMatches;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
@@ -55,19 +55,19 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-lg bg-gray-900 border border-white/10 rounded-2xl shadow-2xl animate-modal-in overflow-hidden">
+      <div className="relative w-full sm:max-w-lg max-h-[92vh] sm:max-h-[85vh] bg-gray-900 border border-white/10 rounded-t-2xl sm:rounded-2xl shadow-2xl animate-modal-in overflow-hidden flex flex-col">
 
         {/* Header */}
-        <div className="relative px-6 pt-6 pb-4 border-b border-white/5">
+        <div className="relative px-4 sm:px-6 pt-5 sm:pt-6 pb-4 border-b border-white/5 shrink-0">
           {/* Glow accent */}
           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent" />
 
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
               {/* Avatar */}
               <div className="relative shrink-0">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-green-500/10 border border-emerald-500/20 flex items-center justify-center">
-                  <span className="text-2xl font-black text-emerald-400">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-green-500/10 border border-emerald-500/20 flex items-center justify-center">
+                  <span className="text-xl sm:text-2xl font-black text-emerald-400">
                     {player.name.charAt(0)}
                   </span>
                 </div>
@@ -78,18 +78,18 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                 </div>
               </div>
 
-              <div>
-                <h2 className="text-lg font-bold text-white">{player.name}</h2>
+              <div className="min-w-0">
+                <h2 className="text-base sm:text-lg font-bold text-white truncate">{player.name}</h2>
                 <p className="text-xs text-white/40 mt-0.5">
                   {player.position} · #{player.jerseyNumber}
                 </p>
                 {/* Mini stats */}
-                <div className="flex items-center gap-3 mt-2">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
                   <span className="flex items-center gap-1 text-xs text-amber-400">
                     <Goal className="w-3.5 h-3.5" />
                     <span className="font-bold">{totalGoals}</span> bàn
                   </span>
-                  <span className="text-white/10">·</span>
+                  <span className="text-white/10 hidden xs:inline">·</span>
                   <span className="flex items-center gap-1 text-xs text-purple-400">
                     <Handshake className="w-3.5 h-3.5" />
                     <span className="font-bold">{totalAssists}</span> kiến tạo
@@ -100,7 +100,7 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all shrink-0"
+              className="p-2 -m-2 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all shrink-0"
             >
               <X className="w-5 h-5" />
             </button>
@@ -144,7 +144,7 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
         </div>
 
         {/* Body */}
-        <div className="px-6 py-4 max-h-[55vh] overflow-y-auto">
+        <div className="px-4 sm:px-6 py-4 flex-1 min-h-0 overflow-y-auto">
           {displayList.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 gap-3">
               <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center">
@@ -166,7 +166,7 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                 return (
                   <div
                     key={detail.match.id}
-                    className={`relative flex gap-4 p-4 rounded-xl border transition-all
+                    className={`relative flex gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border transition-all
                       ${isGoal
                         ? 'bg-amber-500/5 border-amber-500/15 hover:border-amber-500/30'
                         : 'bg-purple-500/5 border-purple-500/15 hover:border-purple-500/30'
@@ -235,7 +235,7 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
         </div>
 
         {/* Footer summary */}
-        <div className="px-6 py-3 border-t border-white/5 flex items-center justify-between">
+        <div className="px-4 sm:px-6 py-3 border-t border-white/5 flex items-center justify-between shrink-0">
           <p className="text-xs text-white/30">
             {displayList.length} trận có {activeTab === 'goals' ? 'bàn thắng' : 'kiến tạo'}
           </p>
