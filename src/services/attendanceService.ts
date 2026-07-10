@@ -1,34 +1,89 @@
-import { mockAttendances } from '../data/mockData';
 import type { Attendance, AttendanceRecord } from '../types';
 import dayjs from 'dayjs';
+import { supabaseClient } from "../apis/common";
 
-let attendances = [...mockAttendances];
 
 export const attendanceService = {
-  getByMatch: (matchId: string): Promise<Attendance | undefined> => {
-    return Promise.resolve(attendances.find((a) => a.matchId === matchId));
-  },
+  getByMatch: async (matchId: string): Promise<Attendance | undefined> => {
+    const { data, error } = await supabaseClient
+      .from('attendance_records')
+      .select('*')
+      .eq('match_id', matchId)
+      .order('created_at');
 
-  save: (matchId: string, records: AttendanceRecord[]): Promise<Attendance> => {
-    const existing = attendances.find((a) => a.matchId === matchId);
-    if (existing) {
-      attendances = attendances.map((a) =>
-        a.matchId === matchId
-          ? { ...a, records, savedAt: dayjs().toISOString() }
-          : a
-      );
-    } else {
-      attendances = [
-        ...attendances,
-        { matchId, records, savedAt: dayjs().toISOString() },
-      ];
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      return undefined;
     }
-    return Promise.resolve(
-      attendances.find((a) => a.matchId === matchId)!
-    );
+
+    return {
+      matchId,
+      savedAt: data[0].created_at,
+      records: data.map((item) => ({
+        playerId: item.player_id,
+        status: item.status,
+      })),
+    };
   },
 
-  getAll: (): Promise<Attendance[]> => {
-    return Promise.resolve([...attendances]);
+  save: async (
+    matchId: string,
+    records: AttendanceRecord[]
+  ): Promise<Attendance> => {
+    // Xóa dữ liệu cũ
+    const { error: deleteError } = await supabaseClient
+      .from('attendance_records')
+      .delete()
+      .eq('match_id', matchId);
+
+    if (deleteError) throw deleteError;
+
+    // Insert dữ liệu mới
+    const { error: insertError } = await supabaseClient
+      .from('attendance_records')
+      .insert(
+        records.map((record) => ({
+          match_id: matchId,
+          player_id: record.playerId,
+          status: record.status,
+        }))
+      );
+
+    if (insertError) throw insertError;
+
+    return {
+      matchId,
+      savedAt: dayjs().toISOString(),
+      records,
+    };
+  },
+
+  getAll: async (): Promise<Attendance[]> => {
+    const { data, error } = await supabaseClient
+      .from('attendance_records')
+      .select('*')
+      .order('created_at');
+
+    if (error) throw error;
+
+    const grouped = new Map<string, Attendance>();
+
+    for (const item of data ?? []) {
+      if (!grouped.has(item.match_id)) {
+        grouped.set(item.match_id, {
+          matchId: item.match_id,
+          savedAt: item.created_at,
+          records: [],
+        });
+      }
+
+      grouped.get(item.match_id)!.records.push({
+        playerId: item.player_id,
+        status: item.status,
+      });
+    }
+
+    return Array.from(grouped.values());
   },
 };

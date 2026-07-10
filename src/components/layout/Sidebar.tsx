@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Zap,
+  CircleDollarSign
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -20,6 +21,7 @@ const navItems = [
   { to: '/attendance', icon: ClipboardList, label: 'Điểm danh' },
   { to: '/statistics', icon: BarChart3, label: 'Thống kê' },
   { to: '/performance', icon: Trophy, label: 'Sau trận' },
+  { to: '/contributions', icon: CircleDollarSign, label: 'Đóng quỹ' },
 ];
 
 export const Sidebar: React.FC = () => {

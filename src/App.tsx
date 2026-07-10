@@ -7,6 +7,8 @@ import { MatchesPage } from "./pages/MatchesPage";
 import { AttendancePage } from "./pages/AttendancePage";
 import { StatisticsPage } from "./pages/StatisticsPage";
 import { PerformancePage } from "./pages/PerformancePage";
+import { ContributionsPage } from "./pages/ContributionsPage";
+import { ContributionDetailPage } from "./pages/ContributionDetailPage";
 import { useEffect } from "react";
 import { login } from "./services/authService";
 
@@ -27,6 +29,8 @@ function App() {
             <Route path="/attendance" element={<AttendancePage />} />
             <Route path="/statistics" element={<StatisticsPage />} />
             <Route path="/performance" element={<PerformancePage />} />
+            <Route path="/contributions" element={<ContributionsPage />} />
+            <Route path="/contributions/:id" element={<ContributionDetailPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

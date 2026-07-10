@@ -4,7 +4,8 @@ import { Users, Calendar, Goal, Handshake, TrendingUp, ChevronRight, Trophy, Act
 import { playerService } from '../services/playerService';
 import { matchService } from '../services/matchService';
 import { performanceService } from '../services/performanceService';
-import type { Player, Match } from '../types';
+import { contributionService } from '../services/contributionService';
+import type { Player, Match, Contribution } from '../types';
 import dayjs from 'dayjs';
 
 interface StatsCard {
@@ -17,6 +18,17 @@ interface StatsCard {
   to: string;
 }
 
+interface ContributionSummary {
+  totalDue: number;
+  totalPaid: number;
+  remaining: number;
+  paidCount: number;
+  partialCount: number;
+  unpaidCount: number;
+  exemptCount: number;
+  playerCount: number;
+}
+
 export const DashboardPage: React.FC = () => {
   const [stats, setStats] = useState({
     totalPlayers: 0,
@@ -27,35 +39,66 @@ export const DashboardPage: React.FC = () => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
+  const [contributionSummary, setContributionSummary] = useState<ContributionSummary | null>(null);
+  const [contributionLoading, setContributionLoading] = useState(false);
 
   useEffect(() => {
     const load = async () => {
-      const [ps, ms, perfs] = await Promise.all([
-        playerService.getAll(),
-        matchService.getAll(),
-        performanceService.getAll(),
-      ]);
+      try {
+        setLoading(true);
+        const [ps, ms, perfs] = await Promise.all([
+          playerService.getAll(),
+          matchService.getAll(),
+          performanceService.getAll(),
+        ]);
 
-      const totalGoals = perfs.reduce(
-        (sum, p) => sum + p.performances.reduce((s, pp) => s + pp.goals, 0),
-        0
-      );
-      const totalAssists = perfs.reduce(
-        (sum, p) => sum + p.performances.reduce((s, pp) => s + pp.assists, 0),
-        0
-      );
+        const totalGoals = perfs.reduce(
+          (sum, p) => sum + p.performances.reduce((s, pp) => s + pp.goals, 0),
+          0
+        );
+        const totalAssists = perfs.reduce(
+          (sum, p) => sum + p.performances.reduce((s, pp) => s + pp.assists, 0),
+          0
+        );
 
-      setStats({
-        totalPlayers: ps.length,
-        totalMatches: ms.length,
-        totalGoals,
-        totalAssists,
-      });
-      setPlayers(ps);
-      setMatches(ms.slice(0, 5));
-      setLoading(false);
+        setStats({
+          totalPlayers: ps.length,
+          totalMatches: ms.length,
+          totalGoals,
+          totalAssists,
+        });
+        setPlayers(ps);
+        setMatches(ms.slice(0, 5));
+      } catch (err) {
+        console.error('Failed to load dashboard data', err);
+      } finally {
+        setLoading(false);
+      }
     };
+
     load();
+
+    // Load contribution summary (latest contribution)
+    const loadContributionSummary = async () => {
+      setContributionLoading(true);
+      try {
+        const contributions = await contributionService.getAll();
+        if (contributions.length > 0) {
+          const latest = contributions[0]; // already sorted descending by created_at in service
+          const summary = await contributionService.getSummary(latest.id);
+          setContributionSummary(summary);
+        } else {
+          setContributionSummary(null);
+        }
+      } catch (err) {
+        console.error('Failed to load contribution summary', err);
+        setContributionSummary(null);
+      } finally {
+        setContributionLoading(false);
+      }
+    };
+
+    loadContributionSummary();
   }, []);
 
   const statCards: StatsCard[] = [
@@ -126,6 +169,52 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Contribution Summary Card */}
+      {contributionSummary !== null && (
+        <div className="bg-gray-900/60 border border-white/10 rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Goal className="w-4 h-4 text-emerald-400" />
+              <h3 className="text-sm font-semibold text-white">Tổng quỹ đóng góp</h3>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-4 text-white">
+            <div className="flex items-center gap-4 p-3 bg-gray-800/50 rounded-xl">
+              <div className="flex-1">
+                <p className="text-xs text-white/40">Tổng cần thu</p>
+                <p className="text-lg font-bold">{contributionSummary.totalDue.toLocaleString()} vnđ</p>
+              </div>
+              <div className="flex-1">
+                <p className="text-xs text-white/40">Tổng đã thu</p>
+                <p className="text-lg font-bold text-emerald-400">{contributionSummary.totalPaid.toLocaleString()} vnđ</p>
+              </div>
+              <div className="flex-1">
+                <p className="text-xs text-white/40">Còn thiếu</p>
+                <p className="text-lg font-bold text-red-400">{contributionSummary.remaining.toLocaleString()} vnđ</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-xs text-white/50">
+              <div>
+                <p>Đã đóng:</p>
+                <p className="font-medium">{contributionSummary.paidCount} người</p>
+              </div>
+              <div>
+                <p>Đóng một phần:</p>
+                <p className="font-medium">{contributionSummary.partialCount} người</p>
+              </div>
+              <div>
+                <p>Chưa đóng:</p>
+                <p className="font-medium">{contributionSummary.unpaidCount} người</p>
+              </div>
+              <div>
+                <p>Miễn giảm:</p>
+                <p className="font-medium">{contributionSummary.exemptCount} người</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">

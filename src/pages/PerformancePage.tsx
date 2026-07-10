@@ -24,6 +24,7 @@ export const PerformancePage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [matches, setMatches] = useState<Match[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
+  console.log(players);
   const [presentPlayerIds, setPresentPlayerIds] = useState<Set<string>>(
     new Set(),
   );
@@ -56,7 +57,6 @@ export const PerformancePage: React.FC = () => {
 
   useEffect(() => {
     if (!selectedMatchId) return;
-
     // Load attendance to know which players were present
     attendanceService.getByMatch(selectedMatchId).then((att) => {
       if (att) {
@@ -70,7 +70,6 @@ export const PerformancePage: React.FC = () => {
         setPresentPlayerIds(new Set(players.map((p) => p.id)));
       }
     });
-
     // Load saved performance
     performanceService.getByMatch(selectedMatchId).then((perf) => {
       const map = new Map<
@@ -137,7 +136,6 @@ export const PerformancePage: React.FC = () => {
 
   const activePlayers = players.filter((p) => presentPlayerIds.has(p.id));
   const selectedMatch = matches.find((m) => m.id === selectedMatchId);
-
   const totalGoals = [...performances.values()].reduce(
     (s, v) => s + v.goals,
     0,
