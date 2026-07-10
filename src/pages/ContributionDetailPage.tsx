@@ -1,13 +1,13 @@
-import { useParams, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { contributionService } from '../services/contributionService';
-import { Button } from '../components/ui/Button';
-import { Modal } from '../components/ui/Modal';
-import { Input } from '../components/ui/FormControls';
-import { Select } from '../components/ui/FormControls';
-import dayjs from 'dayjs';
-import { useToast } from '../contexts/ToastContext';
-import type { Contribution, ContributionPlayer } from '../types';
+import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { contributionService } from "../services/contributionService";
+import { Button } from "../components/ui/Button";
+import { Modal } from "../components/ui/Modal";
+import { Input } from "../components/ui/FormControls";
+import { Select } from "../components/ui/FormControls";
+import dayjs from "dayjs";
+import { useToast } from "../contexts/ToastContext";
+import type { Contribution, ContributionPlayer } from "../types";
 
 export const ContributionDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -18,12 +18,12 @@ export const ContributionDetailPage: React.FC = () => {
   const [players, setPlayers] = useState<ContributionPlayer[]>([]);
   const [loading, setLoading] = useState(true);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-  const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string>("");
   const [paymentForm, setPaymentForm] = useState({
     amount: 0,
-    method: 'cash' as 'cash' | 'bank_transfer' | 'other',
-    paidAt: dayjs().format('YYYY-MM-DD'),
-    note: '',
+    method: "cash" as "cash" | "bank_transfer" | "other",
+    paidAt: dayjs().format("YYYY-MM-DD"),
+    note: "",
   });
   useEffect(() => {
     loadData();
@@ -33,14 +33,14 @@ export const ContributionDetailPage: React.FC = () => {
     setLoading(true);
     try {
       const [contribRes, playersRes] = await Promise.all([
-        contributionService.getById(id ?? ''),
-        contributionService.getPlayers(id ?? ''),
+        contributionService.getById(id ?? ""),
+        contributionService.getPlayers(id ?? ""),
       ]);
       setContribution(contribRes ?? null);
       setPlayers(playersRes);
     } catch (err) {
-      console.error('Failed to load contribution data', err);
-      addToast('Failed to load contribution data', 'error');
+      console.error("Failed to load contribution data", err);
+      addToast("Failed to load contribution data", "error");
     } finally {
       setLoading(false);
     }
@@ -51,18 +51,21 @@ export const ContributionDetailPage: React.FC = () => {
     // reset form
     setPaymentForm({
       amount: 0,
-      method: 'cash',
-      paidAt: dayjs().format('YYYY-MM-DD'),
-      note: '',
+      method: "cash",
+      paidAt: dayjs().format("YYYY-MM-DD"),
+      note: "",
     });
     setPaymentModalOpen(true);
   };
 
-  const handlePaymentChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handlePaymentChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
     const { name, value, type } = e.target;
     setPaymentForm((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
+      [name]:
+        type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
     }));
   };
 
@@ -71,22 +74,25 @@ export const ContributionDetailPage: React.FC = () => {
     if (!selectedPlayerId) return;
     try {
       // First add transaction
-      const transaction = await contributionService.addTransaction(
+      await contributionService.addTransaction(
         selectedPlayerId,
         Number(paymentForm.amount),
         paymentForm.method,
         paymentForm.paidAt,
-        paymentForm.note ?? null
+        paymentForm.note ?? null,
       );
       // Update player payment amount
-      await contributionService.updatePlayerPayment(selectedPlayerId, Number(paymentForm.amount));
+      await contributionService.updatePlayerPayment(
+        selectedPlayerId,
+        Number(paymentForm.amount),
+      );
       // Refresh data
       await loadData();
       setPaymentModalOpen(false);
-      addToast('Recorded payment successfully', 'success');
+      addToast("Recorded payment successfully", "success");
     } catch (err) {
-      console.error('Payment failed', err);
-      addToast('Failed to record payment', 'error');
+      console.error("Payment failed", err);
+      addToast("Failed to record payment", "error");
     }
   };
 
@@ -140,7 +146,10 @@ export const ContributionDetailPage: React.FC = () => {
           <h2 className="text-sm font-medium text-white/40">Tổng đã thu</h2>
           <p className="mt-2 text-2xl font-bold text-emerald-400">
             {/* TODO compute total paid from players */}
-            {players.reduce((sum, p) => sum + (p.amountPaid ?? 0), 0).toLocaleString()} vnđ
+            {players
+              .reduce((sum, p) => sum + (p.amountPaid ?? 0), 0)
+              .toLocaleString()}{" "}
+            vnđ
           </p>
         </div>
         <div className="bg-gray-800 rounded-xl p-4">
@@ -149,7 +158,8 @@ export const ContributionDetailPage: React.FC = () => {
             {(
               contribution.default_amount * (players.length ?? 0) -
               players.reduce((sum, p) => sum + (p.amountPaid ?? 0), 0)
-            ).toLocaleString()} vnđ
+            ).toLocaleString()}{" "}
+            vnđ
           </p>
         </div>
       </div>
@@ -182,7 +192,8 @@ export const ContributionDetailPage: React.FC = () => {
             {players.map((p) => (
               <tr key={p.id} className="hover:bg-gray-700/50">
                 <td className="px-6 py-4 text-white">
-                  {/* Player name from joined player */}{p.players?.name ?? 'Unknown'}
+                  {/* Player name from joined player */}
+                  {p.players?.name ?? "Unknown"}
                 </td>
                 <td className="px-6 py-4 text-white">
                   {p.amountDue.toLocaleString()} vnđ
@@ -191,27 +202,30 @@ export const ContributionDetailPage: React.FC = () => {
                   {p.amountPaid.toLocaleString()} vnđ
                 </td>
                 <td className="px-6 py-4 text-white">
-                  {p.amountDue - p.amountPaid >= 0 ? (p.amountDue - p.amountPaid).toLocaleString() : '0'} vnđ
+                  {p.amountDue - p.amountPaid >= 0
+                    ? (p.amountDue - p.amountPaid).toLocaleString()
+                    : "0"}{" "}
+                  vnđ
                 </td>
                 <td className="px-6 py-4">
                   <span
                     className={`px-2 py-1 text-xs rounded-full ${
-                      p.status === 'paid'
-                        ? 'bg-green-500/20 text-green-400'
-                        : p.status === 'partial'
-                        ? 'bg-yellow-500/20 text-yellow-400'
-                        : p.status === 'exempt'
-                        ? 'bg-gray-500/20 text-gray-400'
-                        : 'bg-red-500/20 text-red-400'
+                      p.status === "paid"
+                        ? "bg-green-500/20 text-green-400"
+                        : p.status === "partial"
+                          ? "bg-yellow-500/20 text-yellow-400"
+                          : p.status === "exempt"
+                            ? "bg-gray-500/20 text-gray-400"
+                            : "bg-red-500/20 text-red-400"
                     }`}
                   >
-                    {p.status === 'paid'
-                      ? 'Đã đóng'
-                      : p.status === 'partial'
-                      ? 'Đóng một phần'
-                      : p.status === 'exempt'
-                      ? 'Miễn giảm'
-                      : 'Chưa đóng'}
+                    {p.status === "paid"
+                      ? "Đã đóng"
+                      : p.status === "partial"
+                        ? "Đóng một phần"
+                        : p.status === "exempt"
+                          ? "Miễn giảm"
+                          : "Chưa đóng"}
                   </span>
                 </td>
                 <td className="px-6 py-4 text-right space-x-2">
@@ -262,9 +276,9 @@ export const ContributionDetailPage: React.FC = () => {
             onChange={handlePaymentChange}
             required
             options={[
-              { value: 'cash', label: 'Tiền mặt' },
-              { value: 'bank_transfer', label: 'Chuyển khoản' },
-              { value: 'other', label: 'Khác' },
+              { value: "cash", label: "Tiền mặt" },
+              { value: "bank_transfer", label: "Chuyển khoản" },
+              { value: "other", label: "Khác" },
             ]}
           />
           <Input
@@ -283,10 +297,17 @@ export const ContributionDetailPage: React.FC = () => {
             onChange={handlePaymentChange}
           />
           <div className="flex justify-end">
-            <Button onClick={() => setPaymentModalOpen(false)} variant="outline">
+            <Button
+              onClick={() => setPaymentModalOpen(false)}
+              variant="outline"
+            >
               Hủy
             </Button>
-            <Button onClick={handleSubmitPayment} variant="primary" loading={false}>
+            <Button
+              onClick={handleSubmitPayment}
+              variant="primary"
+              loading={false}
+            >
               Xác nhận
             </Button>
           </div>
@@ -295,4 +316,3 @@ export const ContributionDetailPage: React.FC = () => {
     </div>
   );
 };
-

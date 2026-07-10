@@ -5,7 +5,7 @@ import { playerService } from '../services/playerService';
 import { matchService } from '../services/matchService';
 import { performanceService } from '../services/performanceService';
 import { contributionService } from '../services/contributionService';
-import type { Player, Match, Contribution } from '../types';
+import type { Player, Match } from '../types';
 import dayjs from 'dayjs';
 
 interface StatsCard {
@@ -147,7 +147,7 @@ export const DashboardPage: React.FC = () => {
       </div>
     );
   }
-
+  console.log(contributionLoading);
   const nextMatch = matches.find((m) => dayjs(m.date).isAfter(dayjs()));
   const recentMatches = matches.filter((m) => !dayjs(m.date).isAfter(dayjs())).slice(0, 4);
 
