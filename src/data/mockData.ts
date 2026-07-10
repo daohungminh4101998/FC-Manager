@@ -1,6 +1,3 @@
-import type { MatchPerformance } from '../types';
-import dayjs from 'dayjs';
-
 // =====================
 // Mock Players
 // =====================
@@ -84,47 +81,5 @@ import dayjs from 'dayjs';
 //   },
 // ];
 
-// =====================
-// Mock Performances
-// =====================
-export const mockPerformances: MatchPerformance[] = [
-  {
-    matchId: 'm1',
-    savedAt: dayjs().subtract(28, 'day').toISOString(),
-    performances: [
-      { playerId: 'p8', goals: 2, assists: 0, goalsConceded: 0 },
-      { playerId: 'p9', goals: 1, assists: 1, goalsConceded: 0 },
-      { playerId: 'p6', goals: 0, assists: 2, goalsConceded: 0 },
-      { playerId: 'p5', goals: 0, assists: 1, goalsConceded: 0 },
-    ],
-  },
-  {
-    matchId: 'm2',
-    savedAt: dayjs().subtract(21, 'day').toISOString(),
-    performances: [
-      { playerId: 'p9', goals: 2, assists: 0, goalsConceded: 0 },
-      { playerId: 'p10', goals: 1, assists: 1, goalsConceded: 0 },
-      { playerId: 'p8', goals: 1, assists: 0, goalsConceded: 0 },
-      { playerId: 'p6', goals: 0, assists: 1, goalsConceded: 0 },
-    ],
-  },
-  {
-    matchId: 'm3',
-    savedAt: dayjs().subtract(14, 'day').toISOString(),
-    performances: [
-      { playerId: 'p8', goals: 1, assists: 1, goalsConceded: 0 },
-      { playerId: 'p5', goals: 1, assists: 0, goalsConceded: 0 },
-      { playerId: 'p7', goals: 0, assists: 2, goalsConceded: 0 },
-    ],
-  },
-  {
-    matchId: 'm4',
-    savedAt: dayjs().subtract(7, 'day').toISOString(),
-    performances: [
-      { playerId: 'p9', goals: 3, assists: 0, goalsConceded: 0 },
-      { playerId: 'p6', goals: 1, assists: 1, goalsConceded: 0 },
-      { playerId: 'p8', goals: 0, assists: 2, goalsConceded: 0 },
-      { playerId: 'p12', goals: 1, assists: 0, goalsConceded: 0 },
-    ],
-  },
-];
+// Mock performance data removed — match_performances/goalkeeper_stats/match_defenders
+// are now backed by Supabase (see src/services/performanceService.ts).

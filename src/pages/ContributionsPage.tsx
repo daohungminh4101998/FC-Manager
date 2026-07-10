@@ -5,6 +5,7 @@ import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/FormControls';
 import { Textarea } from '../components/ui/FormControls';
 import { useToast } from '../contexts/ToastContext';
+import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 // import { Contribution } from '../types';
 interface Contribution {
@@ -21,6 +22,8 @@ export const ContributionsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const { addToast } = useToast();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'Admin';
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState<Partial<Contribution>>({
@@ -71,12 +74,14 @@ export const ContributionsPage: React.FC = () => {
   };
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-white">Quản lý đóng quỹ đội bóng</h1>
-        <Button onClick={() => setCreateModalOpen(true)} variant="primary">
-          Tạo đợt thu mới
-        </Button>
+    <div className="p-3 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-white">Quản lý đóng quỹ đội bóng</h1>
+        {isAdmin && (
+          <Button onClick={() => setCreateModalOpen(true)} variant="primary" className="w-full sm:w-auto">
+            Tạo đợt thu mới
+          </Button>
+        )}
       </div>
 
       {loading ? (
@@ -84,55 +89,84 @@ export const ContributionsPage: React.FC = () => {
       ) : contributions.length === 0 ? (
         <p className="text-center py-8 text-white/50">Chưa có đợt thu nào.</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-gray-800 border border-white/10 rounded-lg">
-            <thead className="bg-gray-900">
-              <tr>
-                <th className="px-px-px-6 py-3 text-left text-sm font-medium text-white/50">
-                  Tên đợt thu
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-white/50">
-                  Số tiền mặc định
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-white/50">
-                  Hạn đóng
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-white/50">
-                  Trạng thái
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-white/50">
-                  Hành động
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/10">
-              {contributions.map((c) => (
-                <tr key={c.id} className="hover:bg-gray-700/50">
-                  <td className="px-6 py-4 text-white">{c.name}</td>
-                  <td className="px-6 py-4 text-white">{c?.default_amount?.toLocaleString()} vnđ</td>
-                  <td className="px-6 py-4 text-white">
-                    {(c.due_date)}
-                  </td>
-                  <td className="px-6 py-4">
-                    {/* TODO: compute status from summary maybe later */}
-                    <span className="px-2 py-1 text-xs rounded-full bg-blue-500/20 text-blue-400">
-                      Đang mở
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleView(c.id)}
-                    >
-                      Chi tiết
-                    </Button>
-                  </td>
+        <>
+          {/* Cards on mobile — the desktop table's 5 columns (name, amount, due
+              date, status, action) squeeze too tightly on narrow screens */}
+          <div className="sm:hidden space-y-3">
+            {contributions.map((c) => (
+              <div key={c.id} className="bg-gray-800 border border-white/10 rounded-xl p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-white font-medium">{c.name}</p>
+                  <span className="shrink-0 px-2 py-1 text-xs rounded-full bg-blue-500/20 text-blue-400">
+                    Đang mở
+                  </span>
+                </div>
+                <div className="mt-2 text-sm text-white/60 space-y-1">
+                  <p>Số tiền mặc định: <span className="text-white">{c?.default_amount?.toLocaleString()} vnđ</span></p>
+                  <p>Hạn đóng: <span className="text-white">{c.due_date}</span></p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleView(c.id)}
+                  className="w-full mt-3"
+                >
+                  Chi tiết
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          <div className="hidden sm:block overflow-x-auto">
+            <table className="min-w-full bg-gray-800 border border-white/10 rounded-lg">
+              <thead className="bg-gray-900">
+                <tr>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-white/50">
+                    Tên đợt thu
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-white/50">
+                    Số tiền mặc định
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-white/50">
+                    Hạn đóng
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-white/50">
+                    Trạng thái
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-white/50">
+                    Hành động
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-white/10">
+                {contributions.map((c) => (
+                  <tr key={c.id} className="hover:bg-gray-700/50">
+                    <td className="px-6 py-4 text-white">{c.name}</td>
+                    <td className="px-6 py-4 text-white">{c?.default_amount?.toLocaleString()} vnđ</td>
+                    <td className="px-6 py-4 text-white">
+                      {(c.due_date)}
+                    </td>
+                    <td className="px-6 py-4">
+                      {/* TODO: compute status from summary maybe later */}
+                      <span className="px-2 py-1 text-xs rounded-full bg-blue-500/20 text-blue-400">
+                        Đang mở
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleView(c.id)}
+                      >
+                        Chi tiết
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {/* Create Modal */}
@@ -164,11 +198,11 @@ export const ContributionsPage: React.FC = () => {
             value={formData.description ?? ''}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           />
-          <div className="flex justify-end">
-            <Button onClick={() => setCreateModalOpen(false)} variant="outline">
+          <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+            <Button onClick={() => setCreateModalOpen(false)} variant="outline" className="w-full sm:w-auto">
               Hủy
             </Button>
-            <Button onClick={handleCreate} variant="primary" loading={false}>
+            <Button onClick={handleCreate} variant="primary" loading={false} className="w-full sm:w-auto">
               Tạo
             </Button>
           </div>

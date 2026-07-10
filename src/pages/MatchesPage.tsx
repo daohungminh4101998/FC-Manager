@@ -10,11 +10,14 @@ import { SearchInput } from '../components/ui/SearchInput';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { Badge } from '../components/ui/Badge';
 import { useToast } from '../contexts/ToastContext';
+import { useAuth } from '../contexts/AuthContext';
 import dayjs from 'dayjs';
 import { Link } from 'react-router-dom';
 
 export const MatchesPage: React.FC = () => {
   const { addToast } = useToast();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'Admin';
   const [matches, setMatches] = useState<Match[]>([]);
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -94,9 +97,11 @@ export const MatchesPage: React.FC = () => {
             placeholder="Tìm theo đối thủ, địa điểm..."
           />
         </div>
-        <Button leftIcon={<Plus className="w-4 h-4" />} onClick={openCreate}>
-          Thêm trận đấu
-        </Button>
+        {isAdmin && (
+          <Button leftIcon={<Plus className="w-4 h-4" />} onClick={openCreate}>
+            Thêm trận đấu
+          </Button>
+        )}
       </div>
 
       {/* Match Cards */}
@@ -119,20 +124,22 @@ export const MatchesPage: React.FC = () => {
                       {upcoming ? 'Sắp diễn ra' : 'Đã đấu'}
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => openEdit(match)}
-                      className="p-1.5 rounded-lg text-white/40 hover:text-blue-400 hover:bg-blue-500/10 transition-all"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setDeleteTarget(match)}
-                      className="p-1.5 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                  {isAdmin && (
+                    <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => openEdit(match)}
+                        className="w-9 h-9 rounded-lg text-white/40 hover:text-blue-400 hover:bg-blue-500/10 transition-all flex items-center justify-center"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget(match)}
+                        className="w-9 h-9 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all flex items-center justify-center"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <h3 className="text-lg font-bold text-white mb-3">
@@ -159,16 +166,16 @@ export const MatchesPage: React.FC = () => {
                 <div className="mt-4 pt-4 border-t border-white/5 flex gap-2">
                   <Link
                     to={`/attendance?match=${match.id}`}
-                    className="flex-1 text-center py-1.5 rounded-lg text-xs font-medium
+                    className="flex-1 flex items-center justify-center min-h-[40px] text-center py-2 rounded-lg text-xs font-medium
                       bg-emerald-500/10 text-emerald-400 border border-emerald-500/20
                       hover:bg-emerald-500/20 transition-colors"
                   >
                     Điểm danh
                   </Link>
-                  {!upcoming && (
+                  {!upcoming && isAdmin && (
                     <Link
                       to={`/performance?match=${match.id}`}
-                      className="flex-1 text-center py-1.5 rounded-lg text-xs font-medium
+                      className="flex-1 flex items-center justify-center min-h-[40px] text-center py-2 rounded-lg text-xs font-medium
                         bg-amber-500/10 text-amber-400 border border-amber-500/20
                         hover:bg-amber-500/20 transition-colors"
                     >

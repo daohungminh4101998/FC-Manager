@@ -26,7 +26,7 @@ export const Modal: React.FC<ModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
@@ -35,21 +35,22 @@ export const Modal: React.FC<ModalProps> = ({
       {/* Modal */}
       <div
         className={`relative w-full ${sizeMap[size]} bg-gray-900 border border-white/10
-          rounded-2xl shadow-2xl animate-modal-in`}
+          rounded-t-2xl sm:rounded-2xl shadow-2xl animate-modal-in
+          max-h-[92vh] sm:max-h-[85vh] flex flex-col`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-          <h2 className="text-lg font-semibold text-white">{title}</h2>
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-white/10 shrink-0">
+          <h2 className="text-base sm:text-lg font-semibold text-white truncate pr-2">{title}</h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10
-              transition-all duration-200"
+            className="p-2 -m-2 rounded-lg text-white/50 hover:text-white hover:bg-white/10
+              transition-all duration-200 shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
         {/* Body */}
-        <div className="px-6 py-5 max-h-[80vh] overflow-y-auto">{children}</div>
+        <div className="px-4 sm:px-6 py-5 overflow-y-auto">{children}</div>
       </div>
     </div>
   );

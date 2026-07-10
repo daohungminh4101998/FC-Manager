@@ -10,6 +10,7 @@ import { Badge } from '../components/ui/Badge';
 import { SearchInput } from '../components/ui/SearchInput';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { useToast } from '../contexts/ToastContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const POSITIONS: { value: Position; label: string }[] = [
   { value: 'GK', label: 'Thủ môn (GK)' },
@@ -27,6 +28,8 @@ const positionBadge: Record<Position, 'amber' | 'blue' | 'emerald' | 'red'> = {
 
 export const PlayersPage: React.FC = () => {
   const { addToast } = useToast();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'Admin';
   const [players, setPlayers] = useState<Player[]>([]);
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -105,96 +108,146 @@ export const PlayersPage: React.FC = () => {
             placeholder="Tìm theo tên, số áo, vị trí..."
           />
         </div>
-        <Button leftIcon={<Plus className="w-4 h-4" />} onClick={openCreate}>
-          Thêm cầu thủ
-        </Button>
+        {isAdmin && (
+          <Button leftIcon={<Plus className="w-4 h-4" />} onClick={openCreate}>
+            Thêm cầu thủ
+          </Button>
+        )}
       </div>
 
-      {/* Table */}
+      {/* Player list — cards on mobile (avoids squeezing 6 columns / horizontal scroll),
+          table on sm+ where there's enough width to show everything at a glance */}
       <div className="bg-gray-900/60 border border-white/10 rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-white/5">
-                <th className="px-5 py-3.5 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
-                  #
-                </th>
-                <th className="px-5 py-3.5 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
-                  Cầu thủ
-                </th>
-                <th className="px-5 py-3.5 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
-                  Số áo
-                </th>
-                <th className="px-5 py-3.5 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
-                  Vị trí
-                </th>
-                <th className="px-5 py-3.5 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
-                  SĐT
-                </th>
-                <th className="px-5 py-3.5 text-right text-xs font-medium text-white/40 uppercase tracking-wider">
-                  Thao tác
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-5 py-10 text-center text-white/30">
-                    Không tìm thấy cầu thủ nào
-                  </td>
-                </tr>
-              ) : (
-                filtered.map((p, index) => (
-                  <tr key={p.id} className="hover:bg-white/3 transition-colors group">
-                    <td className="px-5 py-4 text-white/30">{index + 1}</td>
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500/20 to-green-500/10 border border-emerald-500/20 flex items-center justify-center">
-                          <span className="text-xs font-bold text-emerald-400">
-                            {p.name.charAt(0)}
-                          </span>
-                        </div>
-                        <span className="font-medium text-white">{p.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className="font-mono text-white/80">#{p.jerseyNumber}</span>
-                    </td>
-                    <td className="px-5 py-4">
-                      <Badge variant={positionBadge[p.position]}>{p.position}</Badge>
-                    </td>
-                    <td className="px-5 py-4">
-                      {p.phone ? (
-                        <span className="flex items-center gap-1.5 text-white/60">
+        {filtered.length === 0 ? (
+          <div className="px-5 py-10 text-center text-white/30">
+            Không tìm thấy cầu thủ nào
+          </div>
+        ) : (
+          <>
+            {/* Mobile cards */}
+            <div className="sm:hidden divide-y divide-white/5">
+              {filtered.map((p) => (
+                <div key={p.id} className="p-4 flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500/20 to-green-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                    <span className="text-sm font-bold text-emerald-400">
+                      {p.name.charAt(0)}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-white truncate">{p.name}</span>
+                      <Badge variant={positionBadge[p.position]} size="sm">{p.position}</Badge>
+                    </div>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-white/50">
+                      <span className="font-mono">#{p.jerseyNumber}</span>
+                      {p.phone && (
+                        <span className="flex items-center gap-1">
                           <Phone className="w-3 h-3" />
                           {p.phone}
                         </span>
-                      ) : (
-                        <span className="text-white/20">—</span>
                       )}
-                    </td>
-                    <td className="px-5 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => openEdit(p)}
-                          className="p-1.5 rounded-lg text-white/40 hover:text-blue-400 hover:bg-blue-500/10 transition-all"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setDeleteTarget(p)}
-                          className="p-1.5 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
+                    </div>
+                  </div>
+                  {isAdmin && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => openEdit(p)}
+                        className="w-10 h-10 rounded-lg text-white/40 hover:text-blue-400 hover:bg-blue-500/10 transition-all flex items-center justify-center"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget(p)}
+                        className="w-10 h-10 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all flex items-center justify-center"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/5">
+                    <th className="px-5 py-3.5 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
+                      #
+                    </th>
+                    <th className="px-5 py-3.5 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
+                      Cầu thủ
+                    </th>
+                    <th className="px-5 py-3.5 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
+                      Số áo
+                    </th>
+                    <th className="px-5 py-3.5 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
+                      Vị trí
+                    </th>
+                    <th className="px-5 py-3.5 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
+                      SĐT
+                    </th>
+                    <th className="px-5 py-3.5 text-right text-xs font-medium text-white/40 uppercase tracking-wider">
+                      Thao tác
+                    </th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {filtered.map((p, index) => (
+                    <tr key={p.id} className="hover:bg-white/3 transition-colors group">
+                      <td className="px-5 py-4 text-white/30">{index + 1}</td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500/20 to-green-500/10 border border-emerald-500/20 flex items-center justify-center">
+                            <span className="text-xs font-bold text-emerald-400">
+                              {p.name.charAt(0)}
+                            </span>
+                          </div>
+                          <span className="font-medium text-white">{p.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className="font-mono text-white/80">#{p.jerseyNumber}</span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <Badge variant={positionBadge[p.position]}>{p.position}</Badge>
+                      </td>
+                      <td className="px-5 py-4">
+                        {p.phone ? (
+                          <span className="flex items-center gap-1.5 text-white/60">
+                            <Phone className="w-3 h-3" />
+                            {p.phone}
+                          </span>
+                        ) : (
+                          <span className="text-white/20">—</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-4 text-right">
+                        {isAdmin && (
+                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => openEdit(p)}
+                              className="p-1.5 rounded-lg text-white/40 hover:text-blue-400 hover:bg-blue-500/10 transition-all"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setDeleteTarget(p)}
+                              className="p-1.5 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
         <div className="px-5 py-3 border-t border-white/5 text-xs text-white/30">
           {filtered.length} / {players.length} cầu thủ
         </div>

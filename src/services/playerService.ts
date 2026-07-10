@@ -14,6 +14,18 @@ export const playerService = {
     return data ?? [];
   },
 
+  async getActive(): Promise<Player[]> {
+    const { data, error } = await supabaseClient
+      .from("players")
+      .select("*")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    return data ?? [];
+  },
+
   async getById(id: string): Promise<Player | undefined> {
     const { data, error } = await supabaseClient
       .from("players")
