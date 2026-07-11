@@ -7,6 +7,7 @@ import { performanceService } from '../services/performanceService';
 import { contributionService } from '../services/contributionService';
 import type { Player, Match } from '../types';
 import dayjs from 'dayjs';
+import { useToast } from '../contexts/ToastContext';
 
 interface StatsCard {
   label: string;
@@ -41,13 +42,14 @@ export const DashboardPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [contributionSummary, setContributionSummary] = useState<ContributionSummary | null>(null);
   const [, setContributionLoading] = useState(false);
+  const { addToast } = useToast();
 
   useEffect(() => {
     const load = async () => {
       try {
         setLoading(true);
         const [ps, ms, perfs] = await Promise.all([
-          playerService.getAll(),
+          playerService.getActive(),
           matchService.getAll(),
           performanceService.getAllPerformances(),
         ]);
@@ -65,6 +67,7 @@ export const DashboardPage: React.FC = () => {
         setMatches(ms.slice(0, 5));
       } catch (err) {
         console.error('Failed to load dashboard data', err);
+        addToast('Không thể tải dữ liệu tổng quan!', 'error');
       } finally {
         setLoading(false);
       }
@@ -86,6 +89,7 @@ export const DashboardPage: React.FC = () => {
         }
       } catch (err) {
         console.error('Failed to load contribution summary', err);
+        addToast('Không thể tải dữ liệu quỹ đóng góp!', 'error');
         setContributionSummary(null);
       } finally {
         setContributionLoading(false);

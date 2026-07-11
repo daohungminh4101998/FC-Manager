@@ -79,9 +79,49 @@ export const contributionService = {
     return updated[0];
   },
 
+  // Explicit two-step delete: remove child contribution_players first so this
+  // works correctly regardless of the live FK's ON DELETE rule (RESTRICT vs
+  // CASCADE) — callers are expected to have already confirmed no player under
+  // this contribution has any transactions before calling this.
   delete: async (id: string): Promise<void> => {
-    const { error } = await supabaseClient.from('contributions').delete().eq('id', id);
-    if (error) throw error;
+    try {
+      const { error: childError } = await supabaseClient
+        .from('contribution_players')
+        .delete()
+        .eq('contribution_id', id);
+      if (childError) throw childError;
+
+      const { error } = await supabaseClient.from('contributions').delete().eq('id', id);
+      if (error) throw error;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
+      if (err?.code === '23503') {
+        throw new Error(
+          'Không thể xóa đợt thu vì đã có giao dịch thanh toán. Vui lòng xử lý từng nghĩa vụ đóng góp trước.'
+        );
+      }
+      throw err;
+    }
+  },
+
+  // Deleting a single player's contribution obligation. Blocked at the DB
+  // level (23503) if that player already has contribution_transactions.
+  deleteContributionPlayer: async (contributionPlayerId: string): Promise<void> => {
+    try {
+      const { error } = await supabaseClient
+        .from('contribution_players')
+        .delete()
+        .eq('id', contributionPlayerId);
+      if (error) throw error;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
+      if (err?.code === '23503') {
+        throw new Error(
+          'Không thể xóa: cầu thủ này đã có giao dịch thanh toán. Vui lòng xóa các giao dịch liên quan trước, hoặc đặt trạng thái miễn giảm thay vì xóa.'
+        );
+      }
+      throw err;
+    }
   },
 
   // Players for a contribution

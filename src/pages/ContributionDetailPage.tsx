@@ -1,10 +1,12 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { Trash2 } from "lucide-react";
 import { contributionService } from "../services/contributionService";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import { Input } from "../components/ui/FormControls";
 import { Select } from "../components/ui/FormControls";
+import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import dayjs from "dayjs";
 import { useToast } from "../contexts/ToastContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -28,6 +30,8 @@ export const ContributionDetailPage: React.FC = () => {
     paidAt: dayjs().format("YYYY-MM-DD"),
     note: "",
   });
+  const [deletePlayerTarget, setDeletePlayerTarget] = useState<ContributionPlayer | null>(null);
+  const [deleteContributionOpen, setDeleteContributionOpen] = useState(false);
   useEffect(() => {
     loadData();
   }, [id]);
@@ -99,6 +103,53 @@ export const ContributionDetailPage: React.FC = () => {
     }
   };
 
+  const handleDeleteRowClick = (p: ContributionPlayer) => {
+    if (p.amountPaid > 0) {
+      addToast(
+        "Không thể xóa: cầu thủ này đã có giao dịch thanh toán. Vui lòng xóa các giao dịch liên quan trước, hoặc đặt trạng thái miễn giảm thay vì xóa.",
+        "error"
+      );
+      return;
+    }
+    setDeletePlayerTarget(p);
+  };
+
+  const confirmDeleteRow = async () => {
+    if (!deletePlayerTarget) return;
+    try {
+      await contributionService.deleteContributionPlayer(deletePlayerTarget.id);
+      addToast("Đã xóa nghĩa vụ đóng góp", "success");
+      setDeletePlayerTarget(null);
+      await loadData();
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : "Xóa thất bại!", "error");
+    }
+  };
+
+  const handleDeleteContributionClick = () => {
+    const hasAnyTransactions = players.some((p) => p.amountPaid > 0);
+    if (hasAnyTransactions) {
+      addToast(
+        "Không thể xóa đợt thu vì đã có giao dịch thanh toán. Vui lòng xử lý từng nghĩa vụ đóng góp trước.",
+        "error"
+      );
+      return;
+    }
+    setDeleteContributionOpen(true);
+  };
+
+  const confirmDeleteContribution = async () => {
+    if (!contribution) return;
+    try {
+      await contributionService.delete(contribution.id);
+      addToast("Đã xóa đợt thu", "success");
+      navigate("/contributions");
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : "Xóa thất bại!", "error");
+      setDeleteContributionOpen(false);
+    }
+  };
+
   if (loading) {
     return <div className="p-3 sm:p-6">Loading...</div>;
   }
@@ -128,12 +179,7 @@ export const ContributionDetailPage: React.FC = () => {
             >
               Chỉnh sửa
             </Button>
-            <Button
-              onClick={() => {
-                // TODO: delete confirmation
-              }}
-              variant="outline"
-            >
+            <Button onClick={handleDeleteContributionClick} variant="outline">
               Xóa
             </Button>
           </div>
@@ -212,7 +258,7 @@ export const ContributionDetailPage: React.FC = () => {
                 </p>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2 mt-3">
+            <div className={`grid gap-2 mt-3 ${isAdmin ? "grid-cols-3" : "grid-cols-1"}`}>
               {isAdmin && (
                 <Button variant="outline" size="sm" onClick={() => handleOpenPayment(p.id)}>
                   Thu tiền
@@ -221,13 +267,17 @@ export const ContributionDetailPage: React.FC = () => {
               <Button
                 variant="outline"
                 size="sm"
-                className={!isAdmin ? "col-span-2" : ""}
                 onClick={() => {
                   // TODO: show transaction history modal
                 }}
               >
                 Lịch sử
               </Button>
+              {isAdmin && (
+                <Button variant="outline" size="sm" onClick={() => handleDeleteRowClick(p)}>
+                  Xóa
+                </Button>
+              )}
             </div>
           </div>
         ))}
@@ -316,6 +366,11 @@ export const ContributionDetailPage: React.FC = () => {
                   >
                     Lịch sử
                   </Button>
+                  {isAdmin && (
+                    <Button variant="outline" size="sm" onClick={() => handleDeleteRowClick(p)}>
+                      Xóa
+                    </Button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -386,6 +441,22 @@ export const ContributionDetailPage: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={!!deletePlayerTarget}
+        title="Xóa nghĩa vụ đóng góp"
+        message={`Bạn có chắc muốn xóa nghĩa vụ đóng góp của "${deletePlayerTarget?.players?.name ?? "cầu thủ này"}"? Cầu thủ chưa có giao dịch thanh toán nào.`}
+        onConfirm={confirmDeleteRow}
+        onCancel={() => setDeletePlayerTarget(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={deleteContributionOpen}
+        title="Xóa đợt thu"
+        message={`Bạn có chắc muốn xóa đợt thu "${contribution.name}"? Toàn bộ nghĩa vụ đóng góp liên quan sẽ bị xóa theo. Chưa có ai đóng tiền trong đợt này.`}
+        onConfirm={confirmDeleteContribution}
+        onCancel={() => setDeleteContributionOpen(false)}
+      />
     </div>
   );
 };

@@ -7,6 +7,7 @@ interface ConfirmDialogProps {
   confirmLabel?: string;
   onConfirm: () => void;
   onCancel: () => void;
+  children?: React.ReactNode;
 }
 
 export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
@@ -16,6 +17,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   confirmLabel = 'Xóa',
   onConfirm,
   onCancel,
+  children,
 }) => {
   if (!isOpen) return null;
 
@@ -25,6 +27,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       <div className="relative w-full sm:max-w-sm bg-gray-900 border border-white/10 rounded-t-2xl sm:rounded-2xl shadow-2xl p-6 animate-modal-in">
         <h3 className="text-lg font-semibold text-white mb-2">{title}</h3>
         <p className="text-sm text-white/60 mb-6">{message}</p>
+        {children}
         <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
           <button
             onClick={onCancel}
