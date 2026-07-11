@@ -10,9 +10,10 @@ export interface Player {
   position: Position;
   phone?: string;
   createdAt: string;
+  isActive: boolean;
 }
 
-export type PlayerFormData = Omit<Player, 'id' | 'createdAt'>;
+export type PlayerFormData = Omit<Player, 'id' | 'createdAt' | 'isActive'>;
 
 // =====================
 // Match Types
