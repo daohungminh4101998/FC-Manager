@@ -5,10 +5,10 @@ import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import { Input } from "../components/ui/FormControls";
 import { Select } from "../components/ui/FormControls";
+import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import dayjs from "dayjs";
 import { useToast } from "../contexts/ToastContext";
 import type { Contribution, ContributionPlayer } from "../types";
-import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 
 export const ContributionDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
