@@ -217,6 +217,43 @@ export const contributionService = {
     }));
   },
 
+  // Get transaction history for a contribution (all players)
+  getTransactionsByContributionId: async (
+    contributionId: string
+  ): Promise<ContributionTransaction[]> => {
+    // Get all contribution player ids for this contribution
+    const { data: playerData, error: playerError } = await supabaseClient
+      .from('contribution_players')
+      .select('id')
+      .eq('contribution_id', contributionId);
+
+    if (playerError) throw playerError;
+
+    const playerIds = playerData?.map(p => p.id) || [];
+
+    if (playerIds.length === 0) {
+      return [];
+    }
+
+    const { data: transactionData, error: transactionError } = await supabaseClient
+      .from('contribution_transactions')
+      .select('*')
+      .in('contribution_id', playerIds)
+      .order('paid_at', { ascending: false });
+
+    if (transactionError) throw transactionError;
+
+    return (transactionData ?? []).map((t) => ({
+      id: t.id,
+      contributionPlayerId: t.contribution_id,
+      amount: t.amount,
+      paidAt: t.paid_at,
+      method: t.method as PaymentMethod,
+      note: t.note ?? null,
+      createdAt: t.created_at,
+    }));
+  },
+
   // Get summary stats for a contribution
   getSummary: async (contributionId: string) => {
     const { data: players, error } = await supabaseClient
