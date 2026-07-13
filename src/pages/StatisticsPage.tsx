@@ -1,50 +1,113 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import dayjs from 'dayjs';
 import { playerService } from '../services/playerService';
 import { attendanceService } from '../services/attendanceService';
 import { performanceService } from '../services/performanceService';
 import { matchService } from '../services/matchService';
-import type { PlayerStats, Match, MatchPerformance } from '../types';
+import type {
+  PlayerStats,
+  Player,
+  Match,
+  Attendance,
+  MatchPerformance,
+  GoalkeeperStat,
+  MatchDefender,
+} from '../types';
 import { SearchInput } from '../components/ui/SearchInput';
 import { Badge } from '../components/ui/Badge';
 import { PlayerDetailModal, type DetailTab } from '../components/ui/PlayerDetailModal';
-import { Goal, Handshake, Calendar, XCircle, TrendingUp, X } from 'lucide-react';
+import { MatchStatModal, type MatchStatRow } from '../components/ui/MatchStatModal';
+import { Goal, Handshake, Calendar, XCircle, TrendingUp, X, Shield, Users } from 'lucide-react';
 
 type SortKey = 'name' | 'matchesPlayed' | 'matchesAbsent' | 'totalGoals' | 'totalAssists' | 'totalGoalsConceded';
+type YearFilter = 'all' | number;
 
 interface DetailState {
   playerStats: PlayerStats;
   tab: DetailTab;
 }
 
+interface GoalkeeperRanking {
+  player: Player;
+  totalConceded: number;
+  totalMatchesPlayed: number;
+  concededPerMatch: number;
+}
+
+interface DefenderRanking {
+  player: Player;
+  matchesCount: number;
+}
+
 export const StatisticsPage: React.FC = () => {
-  const [stats, setStats] = useState<PlayerStats[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [allAttendances, setAllAttendances] = useState<Attendance[]>([]);
   const [allMatches, setAllMatches] = useState<Match[]>([]);
-  const [allPerfs, setAllPerfs] = useState<MatchPerformance[]>([]);
+  const [allPerformances, setAllPerformances] = useState<(MatchPerformance & { match: Match })[]>([]);
+  const [allGoalkeeperStats, setAllGoalkeeperStats] = useState<(GoalkeeperStat & { match: Match })[]>([]);
+  const [allDefenders, setAllDefenders] = useState<(MatchDefender & { match: Match })[]>([]);
+
+  const [year, setYear] = useState<YearFilter>('all');
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('totalGoals');
   const [sortAsc, setSortAsc] = useState(false);
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState<DetailState | null>(null);
+  const [gkDetail, setGkDetail] = useState<{ player: Player; rows: MatchStatRow[] } | null>(null);
+  const [defDetail, setDefDetail] = useState<{ player: Player; rows: MatchStatRow[] } | null>(null);
+
   const load = useCallback(async () => {
     setLoading(true);
-    const [players, allAttendances, perfs, matches] = await Promise.all([
+    const [ps, attendances, matches, performances, gkStats, defenders] = await Promise.all([
       playerService.getAll(),
       attendanceService.getAll(),
-      performanceService.getAll(),
       matchService.getAll(),
+      performanceService.getAllPerformances(),
+      performanceService.getAllGoalkeeperStats(),
+      performanceService.getAllDefenders(),
     ]);
 
-    const pastMatchIds = new Set(
-      matches
+    setPlayers(ps);
+    setAllAttendances(attendances);
+    setAllMatches(matches);
+    setAllPerformances(performances);
+    setAllGoalkeeperStats(gkStats);
+    setAllDefenders(defenders);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const availableYears = useMemo(() => {
+    const years = new Set(allMatches.map((m) => dayjs(m.date).year()));
+    return [...years].sort((a, b) => b - a);
+  }, [allMatches]);
+
+  const pastMatchIds = useMemo(() => {
+    return new Set(
+      allMatches
         .filter((m) => !dayjs(m.date).isAfter(dayjs()))
+        .filter((m) => year === 'all' || dayjs(m.date).year() === year)
         .map((m) => m.id)
     );
+  }, [allMatches, year]);
 
-    const result: PlayerStats[] = players.map((player) => {
-      const playerAttendances = allAttendances.filter((a) =>
-        pastMatchIds.has(a.matchId)
-      );
+  const yearPerformances = useMemo(
+    () => allPerformances.filter((p) => year === 'all' || dayjs(p.match.date).year() === year),
+    [allPerformances, year]
+  );
+  const yearGoalkeeperStats = useMemo(
+    () => allGoalkeeperStats.filter((g) => year === 'all' || dayjs(g.match.date).year() === year),
+    [allGoalkeeperStats, year]
+  );
+  const yearDefenders = useMemo(
+    () => allDefenders.filter((d) => year === 'all' || dayjs(d.match.date).year() === year),
+    [allDefenders, year]
+  );
+
+  const stats: PlayerStats[] = useMemo(() => {
+    return players.map((player) => {
+      const playerAttendances = allAttendances.filter((a) => pastMatchIds.has(a.matchId));
 
       const matchesPlayed = playerAttendances.filter((a) =>
         a.records.find((r) => r.playerId === player.id && r.status === 'present')
@@ -54,51 +117,103 @@ export const StatisticsPage: React.FC = () => {
         a.records.find((r) => r.playerId === player.id && r.status === 'absent')
       ).length;
 
-      const totalGoals = perfs.reduce((sum, perf) => {
-        const pp = perf.performances.find((p) => p.playerId === player.id);
-        return sum + (pp?.goals || 0);
-      }, 0);
+      const totalGoals = yearPerformances
+        .filter((p) => p.playerId === player.id)
+        .reduce((sum, p) => sum + p.goals, 0);
 
-      const totalAssists = perfs.reduce((sum, perf) => {
-        const pp = perf.performances.find((p) => p.playerId === player.id);
-        return sum + (pp?.assists || 0);
-      }, 0);
+      const totalAssists = yearPerformances
+        .filter((p) => p.playerId === player.id)
+        .reduce((sum, p) => sum + p.assists, 0);
 
-      const totalGoalsConceded = perfs.reduce((sum, perf) => {
-        const pp = perf.performances.find((p) => p.playerId === player.id);
-        return sum + (pp?.goalsConceded || 0);
-      }, 0);
+      const totalGoalsConceded = yearGoalkeeperStats
+        .filter((g) => g.playerId === player.id)
+        .reduce((sum, g) => sum + g.goalsConceded, 0);
 
       return { player, matchesPlayed, matchesAbsent, totalGoals, totalAssists, totalGoalsConceded };
     });
+  }, [players, allAttendances, pastMatchIds, yearPerformances, yearGoalkeeperStats]);
 
-    setStats(result);
-    setAllMatches(matches);
-    setAllPerfs(perfs);
-    setLoading(false);
-  }, []);
+  const topScorers = useMemo(
+    () => stats.filter((s) => s.totalGoals > 0).sort((a, b) => b.totalGoals - a.totalGoals),
+    [stats]
+  );
+  const topAssisters = useMemo(
+    () => stats.filter((s) => s.totalAssists > 0).sort((a, b) => b.totalAssists - a.totalAssists),
+    [stats]
+  );
 
-  useEffect(() => { load(); }, [load]);
+  const goalkeeperRankings: GoalkeeperRanking[] = useMemo(() => {
+    const byPlayer = new Map<string, { totalConceded: number; totalMatchesPlayed: number }>();
+    yearGoalkeeperStats.forEach((g) => {
+      const current = byPlayer.get(g.playerId) || { totalConceded: 0, totalMatchesPlayed: 0 };
+      current.totalConceded += g.goalsConceded;
+      current.totalMatchesPlayed += g.matchesPlayed;
+      byPlayer.set(g.playerId, current);
+    });
+
+    const rankings: GoalkeeperRanking[] = [];
+    byPlayer.forEach((value, playerId) => {
+      const player = players.find((p) => p.id === playerId);
+      if (!player) return;
+      rankings.push({
+        player,
+        totalConceded: value.totalConceded,
+        totalMatchesPlayed: value.totalMatchesPlayed,
+        concededPerMatch: value.totalMatchesPlayed > 0
+          ? Number((value.totalConceded / value.totalMatchesPlayed).toFixed(2))
+          : 0,
+      });
+    });
+
+    return rankings.sort((a, b) => a.concededPerMatch - b.concededPerMatch);
+  }, [yearGoalkeeperStats, players]);
+
+  const defenderRankings: DefenderRanking[] = useMemo(() => {
+    const byPlayer = new Map<string, number>();
+    yearDefenders.forEach((d) => byPlayer.set(d.playerId, (byPlayer.get(d.playerId) ?? 0) + 1));
+
+    const rankings: DefenderRanking[] = [];
+    byPlayer.forEach((count, playerId) => {
+      const player = players.find((p) => p.id === playerId);
+      if (!player) return;
+      rankings.push({ player, matchesCount: count });
+    });
+
+    return rankings.sort((a, b) => b.matchesCount - a.matchesCount);
+  }, [yearDefenders, players]);
 
   /** Tính danh sách trận với bàn thắng/kiến tạo cho một cầu thủ */
   const buildMatchDetails = (playerId: string) => {
-    return allPerfs
-      .map((perf) => {
-        const match = allMatches.find((m) => m.id === perf.matchId);
-        const pp = perf.performances.find((p) => p.playerId === playerId);
-        if (!match || !pp || (pp.goals === 0 && pp.assists === 0)) return null;
-        return { match, goals: pp.goals, assists: pp.assists };
-      })
-      .filter(Boolean)
-      .sort((a, b) => dayjs(b!.match.date).diff(dayjs(a!.match.date))) as {
-        match: Match;
-        goals: number;
-        assists: number;
-      }[];
+    return yearPerformances
+      .filter((p) => p.playerId === playerId && (p.goals > 0 || p.assists > 0))
+      .map((p) => ({ match: p.match, goals: p.goals, assists: p.assists }))
+      .sort((a, b) => dayjs(b.match.date).diff(dayjs(a.match.date)));
   };
 
   const openDetail = (s: PlayerStats, tab: DetailTab) => {
     setDetail({ playerStats: s, tab });
+  };
+
+  const openGoalkeeperDetail = (ranking: GoalkeeperRanking) => {
+    const rows: MatchStatRow[] = yearGoalkeeperStats
+      .filter((g) => g.playerId === ranking.player.id)
+      .sort((a, b) => dayjs(b.match.date).diff(dayjs(a.match.date)))
+      .map((g) => ({
+        match: g.match,
+        columns: [
+          { label: 'Bàn thua', value: g.goalsConceded },
+          { label: 'Số trận', value: g.matchesPlayed.toFixed(2) },
+        ],
+      }));
+    setGkDetail({ player: ranking.player, rows });
+  };
+
+  const openDefenderDetail = (ranking: DefenderRanking) => {
+    const rows: MatchStatRow[] = yearDefenders
+      .filter((d) => d.playerId === ranking.player.id)
+      .sort((a, b) => dayjs(b.match.date).diff(dayjs(a.match.date)))
+      .map((d) => ({ match: d.match, columns: [] }));
+    setDefDetail({ player: ranking.player, rows });
   };
 
   const handleSort = (key: SortKey) => {
@@ -142,9 +257,25 @@ export const StatisticsPage: React.FC = () => {
 
   return (
     <div className="space-y-5">
+      {/* Year filter */}
+      <div className="flex items-center gap-2">
+        <label className="text-xs text-white/40">Năm</label>
+        <select
+          value={year}
+          onChange={(e) => setYear(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+          className="px-3 py-1.5 rounded-lg text-sm text-white bg-gray-800 border border-white/10
+            focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+        >
+          <option value="all">Tất cả</option>
+          {availableYears.map((y) => (
+            <option key={y} value={y}>{y}</option>
+          ))}
+        </select>
+      </div>
+
       {/* Highlight Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {topScorer && (
+        {topScorer && topScorer.totalGoals > 0 && (
           <button
             onClick={() => openDetail(topScorer, 'goals')}
             className="text-left bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4
@@ -161,7 +292,7 @@ export const StatisticsPage: React.FC = () => {
             <p className="text-2xl font-black text-amber-400">{topScorer.totalGoals} bàn</p>
           </button>
         )}
-        {topAssist && (
+        {topAssist && topAssist.totalAssists > 0 && (
           <button
             onClick={() => openDetail(topAssist, 'assists')}
             className="text-left bg-purple-500/5 border border-purple-500/20 rounded-2xl p-4
@@ -178,7 +309,7 @@ export const StatisticsPage: React.FC = () => {
             <p className="text-2xl font-black text-purple-400">{topAssist.totalAssists} kiến tạo</p>
           </button>
         )}
-        {mostPresent && (
+        {mostPresent && mostPresent.matchesPlayed > 0 && (
           <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-2">
               <TrendingUp className="w-4 h-4 text-emerald-400" />
@@ -199,9 +330,85 @@ export const StatisticsPage: React.FC = () => {
         />
       </div>
 
-      {/* Table */}
+      {/* Player stats — cards on mobile (7 columns is too dense for horizontal
+          scroll to stay usable), sortable table on sm+ */}
       <div className="bg-gray-900/60 border border-white/10 rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="sm:hidden divide-y divide-white/5">
+          {filtered.map((s, index) => (
+            <div key={s.player.id} className="p-4">
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-white/30 w-4 shrink-0">{index + 1}</span>
+                <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                  <span className="text-xs font-bold text-emerald-400">
+                    #{s.player.jerseyNumber}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-white truncate">{s.player.name}</p>
+                  <Badge
+                    variant={
+                      ({ GK: 'amber', DEF: 'blue', MID: 'emerald', FWD: 'red' } as const)[s.player.position]
+                    }
+                    size="sm"
+                  >
+                    {s.player.position}
+                  </Badge>
+                </div>
+              </div>
+              <div className="grid grid-cols-4 gap-2 mt-3 text-center">
+                <div>
+                  <p className="text-[10px] text-white/40 uppercase flex items-center justify-center gap-1">
+                    <Calendar className="w-3 h-3" />Tham dự
+                  </p>
+                  <p className="text-sm font-semibold text-white mt-0.5">{s.matchesPlayed}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-white/40 uppercase flex items-center justify-center gap-1">
+                    <XCircle className="w-3 h-3" />Vắng
+                  </p>
+                  <p className={`text-sm font-semibold mt-0.5 ${s.matchesAbsent > 2 ? 'text-red-400' : 'text-white/60'}`}>
+                    {s.matchesAbsent}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-white/40 uppercase flex items-center justify-center gap-1">
+                    <Goal className="w-3 h-3" />Bàn
+                  </p>
+                  {s.totalGoals > 0 ? (
+                    <button
+                      onClick={() => openDetail(s, 'goals')}
+                      className="text-sm font-bold text-amber-400 mt-0.5 active:scale-95 transition-all"
+                    >
+                      {s.totalGoals}
+                    </button>
+                  ) : (
+                    <p className="text-sm text-white/20 mt-0.5">—</p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-[10px] text-white/40 uppercase flex items-center justify-center gap-1">
+                    <Handshake className="w-3 h-3" />Kiến tạo
+                  </p>
+                  {s.totalAssists > 0 ? (
+                    <button
+                      onClick={() => openDetail(s, 'assists')}
+                      className="text-sm font-bold text-purple-400 mt-0.5 active:scale-95 transition-all"
+                    >
+                      {s.totalAssists}
+                    </button>
+                  ) : (
+                    <p className="text-sm text-white/20 mt-0.5">—</p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center justify-center gap-1 mt-2 text-xs text-white/40">
+                <X className="w-3 h-3 text-red-400" />
+                Bàn thua: <span className={s.totalGoalsConceded > 0 ? 'text-red-400 font-semibold' : 'text-white/60'}>{s.totalGoalsConceded}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/5">
@@ -348,7 +555,158 @@ export const StatisticsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Player Detail Modal */}
+      {/* Ranking tables */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* Table 1 — Vua phá lưới */}
+        <div className="bg-gray-900/60 border border-white/10 rounded-2xl overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-white/5 flex items-center gap-2">
+            <Goal className="w-4 h-4 text-amber-400" />
+            <h3 className="text-sm font-semibold text-white">Vua phá lưới</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/5">
+                  <th className="px-5 py-3 text-left text-xs font-medium text-white/40 w-8">#</th>
+                  <th className="px-5 py-3 text-left text-xs font-medium text-white/40 uppercase">Cầu thủ</th>
+                  <th className="px-5 py-3 text-center text-xs font-medium text-white/40 uppercase">Bàn thắng</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {topScorers.length === 0 ? (
+                  <tr><td colSpan={3} className="px-5 py-6 text-center text-white/30 text-sm">Chưa có dữ liệu</td></tr>
+                ) : (
+                  topScorers.map((s, i) => (
+                    <tr
+                      key={s.player.id}
+                      className="hover:bg-white/3 transition-colors cursor-pointer"
+                      onClick={() => openDetail(s, 'goals')}
+                    >
+                      <td className="px-5 py-3 text-white/30 text-xs">{i + 1}</td>
+                      <td className="px-5 py-3 text-white font-medium">{s.player.name}</td>
+                      <td className="px-5 py-3 text-center text-amber-400 font-bold">{s.totalGoals}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Table 2 — Vua kiến tạo */}
+        <div className="bg-gray-900/60 border border-white/10 rounded-2xl overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-white/5 flex items-center gap-2">
+            <Handshake className="w-4 h-4 text-purple-400" />
+            <h3 className="text-sm font-semibold text-white">Vua kiến tạo</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/5">
+                  <th className="px-5 py-3 text-left text-xs font-medium text-white/40 w-8">#</th>
+                  <th className="px-5 py-3 text-left text-xs font-medium text-white/40 uppercase">Cầu thủ</th>
+                  <th className="px-5 py-3 text-center text-xs font-medium text-white/40 uppercase">Kiến tạo</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {topAssisters.length === 0 ? (
+                  <tr><td colSpan={3} className="px-5 py-6 text-center text-white/30 text-sm">Chưa có dữ liệu</td></tr>
+                ) : (
+                  topAssisters.map((s, i) => (
+                    <tr
+                      key={s.player.id}
+                      className="hover:bg-white/3 transition-colors cursor-pointer"
+                      onClick={() => openDetail(s, 'assists')}
+                    >
+                      <td className="px-5 py-3 text-white/30 text-xs">{i + 1}</td>
+                      <td className="px-5 py-3 text-white font-medium">{s.player.name}</td>
+                      <td className="px-5 py-3 text-center text-purple-400 font-bold">{s.totalAssists}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Table 3 — Thủ môn xuất sắc nhất */}
+        <div className="bg-gray-900/60 border border-white/10 rounded-2xl overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-white/5 flex items-center gap-2">
+            <Shield className="w-4 h-4 text-blue-400" />
+            <h3 className="text-sm font-semibold text-white">Thủ môn xuất sắc nhất</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/5">
+                  <th className="px-5 py-3 text-left text-xs font-medium text-white/40 w-8">#</th>
+                  <th className="px-5 py-3 text-left text-xs font-medium text-white/40 uppercase">Cầu thủ</th>
+                  <th className="px-5 py-3 text-center text-xs font-medium text-white/40 uppercase">Bàn thua</th>
+                  <th className="px-5 py-3 text-center text-xs font-medium text-white/40 uppercase">Số trận</th>
+                  <th className="px-5 py-3 text-center text-xs font-medium text-white/40 uppercase">Bàn thua/trận</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {goalkeeperRankings.length === 0 ? (
+                  <tr><td colSpan={5} className="px-5 py-6 text-center text-white/30 text-sm">Chưa có dữ liệu</td></tr>
+                ) : (
+                  goalkeeperRankings.map((r, i) => (
+                    <tr
+                      key={r.player.id}
+                      className="hover:bg-white/3 transition-colors cursor-pointer"
+                      onClick={() => openGoalkeeperDetail(r)}
+                    >
+                      <td className="px-5 py-3 text-white/30 text-xs">{i + 1}</td>
+                      <td className="px-5 py-3 text-white font-medium">{r.player.name}</td>
+                      <td className="px-5 py-3 text-center text-red-400 font-semibold">{r.totalConceded}</td>
+                      <td className="px-5 py-3 text-center text-white/70">{r.totalMatchesPlayed.toFixed(2)}</td>
+                      <td className="px-5 py-3 text-center text-blue-400 font-bold">{r.concededPerMatch.toFixed(2)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Table 4 — Hậu vệ tham gia nhiều nhất */}
+        <div className="bg-gray-900/60 border border-white/10 rounded-2xl overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-white/5 flex items-center gap-2">
+            <Users className="w-4 h-4 text-emerald-400" />
+            <h3 className="text-sm font-semibold text-white">Hậu vệ tham gia nhiều nhất</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/5">
+                  <th className="px-5 py-3 text-left text-xs font-medium text-white/40 w-8">#</th>
+                  <th className="px-5 py-3 text-left text-xs font-medium text-white/40 uppercase">Cầu thủ</th>
+                  <th className="px-5 py-3 text-center text-xs font-medium text-white/40 uppercase">Số trận</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {defenderRankings.length === 0 ? (
+                  <tr><td colSpan={3} className="px-5 py-6 text-center text-white/30 text-sm">Chưa có dữ liệu</td></tr>
+                ) : (
+                  defenderRankings.map((r, i) => (
+                    <tr
+                      key={r.player.id}
+                      className="hover:bg-white/3 transition-colors cursor-pointer"
+                      onClick={() => openDefenderDetail(r)}
+                    >
+                      <td className="px-5 py-3 text-white/30 text-xs">{i + 1}</td>
+                      <td className="px-5 py-3 text-white font-medium">{r.player.name}</td>
+                      <td className="px-5 py-3 text-center text-emerald-400 font-bold">{r.matchesCount}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* Player Detail Modal (goals / assists) */}
       {detail && (
         <PlayerDetailModal
           isOpen={!!detail}
@@ -358,6 +716,28 @@ export const StatisticsPage: React.FC = () => {
           matchDetails={buildMatchDetails(detail.playerStats.player.id)}
           totalGoals={detail.playerStats.totalGoals}
           totalAssists={detail.playerStats.totalAssists}
+        />
+      )}
+
+      {/* Goalkeeper Detail Modal */}
+      {gkDetail && (
+        <MatchStatModal
+          isOpen={!!gkDetail}
+          onClose={() => setGkDetail(null)}
+          player={gkDetail.player}
+          title="Thống kê thủ môn"
+          rows={gkDetail.rows}
+        />
+      )}
+
+      {/* Defender Detail Modal */}
+      {defDetail && (
+        <MatchStatModal
+          isOpen={!!defDetail}
+          onClose={() => setDefDetail(null)}
+          player={defDetail.player}
+          title="Các trận đá hậu vệ"
+          rows={defDetail.rows}
         />
       )}
     </div>

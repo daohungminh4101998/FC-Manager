@@ -42,16 +42,15 @@ export const ContributionDetailPage: React.FC = () => {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   // History modal state
-  type HistoryEntry = {
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [historyData, setHistoryData] = useState<Array<{
     id: string;
     amount: number;
     paidAt: string;
     method: "cash" | "bank_transfer" | "other";
     note: string | null;
     playerName: string;
-  };
-  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
-  const [historyData, setHistoryData] = useState<HistoryEntry[]>([]);
+  }>>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
   useEffect(() => {
@@ -180,7 +179,7 @@ export const ContributionDetailPage: React.FC = () => {
     try {
       const transactions = await contributionService.getTransactionsByContributionId(contribution.id);
       // Map transactions to include player name
-      const historyWithPlayer: HistoryEntry[] = transactions.map(t => {
+      const historyWithPlayer = transactions.map(t => {
         const player = players.find(p => p.id === t.contributionPlayerId)?.players;
         return {
           id: t.id,

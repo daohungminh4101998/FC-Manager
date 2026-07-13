@@ -47,17 +47,33 @@ export interface Attendance {
 // =====================
 // Match Performance Types
 // =====================
-export interface PlayerPerformance {
+export interface MatchPerformance {
+  id: string;
+  matchId: string;
   playerId: string;
   goals: number;
   assists: number;
-  goalsConceded: number;
+  createdAt: string;
 }
 
-export interface MatchPerformance {
+export type MatchPerformanceInput = Pick<MatchPerformance, 'playerId' | 'goals' | 'assists'>;
+
+export interface GoalkeeperStat {
+  id: string;
   matchId: string;
-  performances: PlayerPerformance[];
-  savedAt: string;
+  playerId: string;
+  goalsConceded: number;
+  matchesPlayed: number;
+  createdAt: string;
+}
+
+export type GoalkeeperStatInput = Pick<GoalkeeperStat, 'playerId' | 'goalsConceded' | 'matchesPlayed'>;
+
+export interface MatchDefender {
+  id: string;
+  matchId: string;
+  playerId: string;
+  createdAt: string;
 }
 
 // =====================
@@ -124,3 +140,19 @@ export interface ContributionTransaction {
   note?: string | null;
   createdAt: string;
 }
+
+// =====================
+// Auth Types
+// =====================
+export type Role = 'Admin' | 'User' | 'Player';
+
+export interface AuthUser {
+  id: string;
+  username: string;
+  role: Role;
+  playerId: string | null;
+}
+
+export type RegisterPayload =
+  | { role: 'User'; username: string; password: string }
+  | { role: 'Player'; username: string; password: string; playerId: string };

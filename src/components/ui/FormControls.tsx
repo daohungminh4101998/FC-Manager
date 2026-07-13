@@ -29,7 +29,7 @@ export const Input: React.FC<InputProps> = ({
         id={inputId}
         {...props}
         className={clsx(
-          'w-full px-3.5 py-2.5 rounded-lg text-sm text-white',
+          'w-full px-3.5 py-3 sm:py-2.5 min-h-[44px] sm:min-h-0 rounded-lg text-sm text-white',
           'bg-white/5 border transition-all duration-200',
           'placeholder:text-white/30',
           'focus:outline-none focus:ring-2 focus:ring-emerald-500/50',

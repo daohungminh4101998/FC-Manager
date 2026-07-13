@@ -1,6 +1,18 @@
 import type { Match, MatchFormData } from '../types';
 import { supabaseClient } from "../apis/common";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function mapMatchRow(row: any): Match {
+  return {
+    id: row.id,
+    opponent: row.opponent,
+    date: row.match_date,
+    venue: row.venue,
+    note: row.note,
+    createdAt: row.created_at,
+  };
+}
+
 export const matchService = {
   getAll: async (): Promise<Match[]> => {
     const { data, error } = await supabaseClient
@@ -10,14 +22,7 @@ export const matchService = {
 
     if (error) throw error;
 
-    return (data ?? []).map(item => ({
-      id: item.id,
-      opponent: item.opponent,
-      date: item.match_date,
-      venue: item.venue,
-      note: item.note,
-      createdAt: item.created_at,
-    }));
+    return (data ?? []).map(mapMatchRow);
   },
 
   getById: async (id: string): Promise<Match | undefined> => {
@@ -32,14 +37,7 @@ export const matchService = {
       throw error;
     }
 
-    return {
-      id: data.id,
-      opponent: data.opponent,
-      date: data.match_date,
-      venue: data.venue,
-      note: data.note,
-      createdAt: data.created_at,
-    };
+    return mapMatchRow(data);
   },
 
   create: async (formData: MatchFormData): Promise<Match> => {
@@ -56,14 +54,7 @@ export const matchService = {
 
     if (error) throw error;
 
-    return {
-      id: data.id,
-      opponent: data.opponent,
-      date: data.match_date,
-      venue: data.venue,
-      note: data.note,
-      createdAt: data.created_at,
-    };
+    return mapMatchRow(data);
   },
 
   update: async (id: string, formData: MatchFormData): Promise<Match> => {
@@ -81,14 +72,7 @@ export const matchService = {
 
     if (error) throw error;
 
-    return {
-      id: data.id,
-      opponent: data.opponent,
-      date: data.match_date,
-      venue: data.venue,
-      note: data.note,
-      createdAt: data.created_at,
-    };
+    return mapMatchRow(data);
   },
 
   delete: async (id: string): Promise<void> => {
