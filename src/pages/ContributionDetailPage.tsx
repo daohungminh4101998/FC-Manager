@@ -9,7 +9,6 @@ import dayjs from "dayjs";
 import { useToast } from "../contexts/ToastContext";
 import type { Contribution, ContributionPlayer } from "../types";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
-import { Pencil, Trash2 } from 'lucide-react';
 
 export const ContributionDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
