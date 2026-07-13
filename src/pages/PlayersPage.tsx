@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
-import { Plus, Pencil, Trash2, Phone } from 'lucide-react';
+import { Plus, Pencil, Ban, RotateCcw, Phone } from 'lucide-react';
 import { playerService } from '../services/playerService';
 import type { Player, PlayerFormData, Position } from '../types';
 import { Modal } from '../components/ui/Modal';
@@ -32,9 +32,13 @@ export const PlayersPage: React.FC = () => {
   const isAdmin = user?.role === 'Admin';
   const [players, setPlayers] = useState<Player[]>([]);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'active' | 'inactive'>('active');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Player | null>(null);
+  const [deleteMode, setDeleteMode] = useState<'deactivate' | 'hard-delete'>('deactivate');
+  const [checkingDeletability, setCheckingDeletability] = useState(false);
+  const [canHardDelete, setCanHardDelete] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
@@ -82,15 +86,62 @@ export const PlayersPage: React.FC = () => {
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    await playerService.delete(deleteTarget.id);
-    addToast(`Đã xóa cầu thủ ${deleteTarget.name}`, 'success');
-    setDeleteTarget(null);
-    load();
+  const openDeactivateDialog = async (p: Player) => {
+    setDeleteTarget(p);
+    setDeleteMode('deactivate');
+    setCanHardDelete(false);
+    setCheckingDeletability(true);
+    try {
+      const hasRecords = await playerService.hasRelatedRecords(p.id);
+      setCanHardDelete(!hasRecords);
+    } catch {
+      setCanHardDelete(false);
+    } finally {
+      setCheckingDeletability(false);
+    }
   };
 
-  const filtered = players.filter(
+  const closeDeleteDialog = () => {
+    setDeleteTarget(null);
+    setDeleteMode('deactivate');
+  };
+
+  const handleDeactivate = async () => {
+    if (!deleteTarget) return;
+    try {
+      await playerService.setActive(deleteTarget.id, false);
+      addToast(`Đã vô hiệu hóa cầu thủ ${deleteTarget.name}`, 'success');
+      closeDeleteDialog();
+      load();
+    } catch {
+      addToast('Có lỗi xảy ra!', 'error');
+    }
+  };
+
+  const handleHardDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await playerService.delete(deleteTarget.id);
+      addToast(`Đã xóa vĩnh viễn cầu thủ ${deleteTarget.name}`, 'success');
+      closeDeleteDialog();
+      load();
+    } catch {
+      addToast('Có lỗi xảy ra!', 'error');
+    }
+  };
+
+  const handleReactivate = async (p: Player) => {
+    try {
+      await playerService.setActive(p.id, true);
+      addToast(`Đã kích hoạt lại cầu thủ ${p.name}`, 'success');
+      load();
+    } catch {
+      addToast('Có lỗi xảy ra!', 'error');
+    }
+  };
+
+  const scoped = players.filter((p) => p.isActive === (statusFilter === 'active'));
+  const filtered = scoped.filter(
     (p) =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       String(p.jerseyNumber).includes(search) ||
@@ -113,6 +164,30 @@ export const PlayersPage: React.FC = () => {
             Thêm cầu thủ
           </Button>
         )}
+      </div>
+
+      {/* Status tabs */}
+      <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-gray-900/60 border border-white/10">
+        <button
+          onClick={() => setStatusFilter('active')}
+          className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
+            statusFilter === 'active'
+              ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
+              : 'text-white/50 hover:text-white/80 border border-transparent'
+          }`}
+        >
+          Đang hoạt động
+        </button>
+        <button
+          onClick={() => setStatusFilter('inactive')}
+          className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
+            statusFilter === 'inactive'
+              ? 'bg-white/10 text-white border border-white/20'
+              : 'text-white/50 hover:text-white/80 border border-transparent'
+          }`}
+        >
+          Đã vô hiệu hóa
+        </button>
       </div>
 
       {/* Player list — cards on mobile (avoids squeezing 6 columns / horizontal scroll),
@@ -150,18 +225,29 @@ export const PlayersPage: React.FC = () => {
                   </div>
                   {isAdmin && (
                     <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        onClick={() => openEdit(p)}
-                        className="w-10 h-10 rounded-lg text-white/40 hover:text-blue-400 hover:bg-blue-500/10 transition-all flex items-center justify-center"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => setDeleteTarget(p)}
-                        className="w-10 h-10 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all flex items-center justify-center"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {statusFilter === 'active' ? (
+                        <>
+                          <button
+                            onClick={() => openEdit(p)}
+                            className="w-10 h-10 rounded-lg text-white/40 hover:text-blue-400 hover:bg-blue-500/10 transition-all flex items-center justify-center"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => openDeactivateDialog(p)}
+                            className="w-10 h-10 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all flex items-center justify-center"
+                          >
+                            <Ban className="w-4 h-4" />
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => handleReactivate(p)}
+                          className="w-10 h-10 rounded-lg text-white/40 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all flex items-center justify-center"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -226,18 +312,29 @@ export const PlayersPage: React.FC = () => {
                       <td className="px-5 py-4 text-right">
                         {isAdmin && (
                           <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={() => openEdit(p)}
-                              className="p-1.5 rounded-lg text-white/40 hover:text-blue-400 hover:bg-blue-500/10 transition-all"
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => setDeleteTarget(p)}
-                              className="p-1.5 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {statusFilter === 'active' ? (
+                              <>
+                                <button
+                                  onClick={() => openEdit(p)}
+                                  className="p-1.5 rounded-lg text-white/40 hover:text-blue-400 hover:bg-blue-500/10 transition-all"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => openDeactivateDialog(p)}
+                                  className="p-1.5 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                                >
+                                  <Ban className="w-4 h-4" />
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => handleReactivate(p)}
+                                className="p-1.5 rounded-lg text-white/40 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all"
+                              >
+                                <RotateCcw className="w-4 h-4" />
+                              </button>
+                            )}
                           </div>
                         )}
                       </td>
@@ -249,7 +346,7 @@ export const PlayersPage: React.FC = () => {
           </>
         )}
         <div className="px-5 py-3 border-t border-white/5 text-xs text-white/30">
-          {filtered.length} / {players.length} cầu thủ
+          {filtered.length} / {scoped.length} cầu thủ {statusFilter === 'active' ? 'đang hoạt động' : 'đã vô hiệu hóa'}
         </div>
       </div>
 
@@ -304,14 +401,46 @@ export const PlayersPage: React.FC = () => {
         </form>
       </Modal>
 
-      {/* Confirm Delete */}
-      <ConfirmDialog
-        isOpen={!!deleteTarget}
-        title="Xóa cầu thủ"
-        message={`Bạn có chắc muốn xóa cầu thủ "${deleteTarget?.name}"? Thao tác này không thể hoàn tác.`}
-        onConfirm={handleDelete}
-        onCancel={() => setDeleteTarget(null)}
-      />
+      {/* Confirm Deactivate / Hard delete */}
+      {deleteMode === 'deactivate' ? (
+        <ConfirmDialog
+          isOpen={!!deleteTarget}
+          title="Vô hiệu hóa cầu thủ"
+          message={`Cầu thủ "${deleteTarget?.name}" sẽ không xuất hiện trong danh sách chọn cho trận mới, đóng quỹ mới, nhưng lịch sử điểm danh/thành tích cũ vẫn được giữ nguyên.`}
+          confirmLabel="Vô hiệu hóa"
+          onConfirm={handleDeactivate}
+          onCancel={closeDeleteDialog}
+        >
+          {checkingDeletability ? (
+            <p className="text-xs text-white/30 -mt-3 mb-4">Đang kiểm tra dữ liệu liên quan...</p>
+          ) : canHardDelete ? (
+            <button
+              type="button"
+              onClick={() => setDeleteMode('hard-delete')}
+              className="text-xs text-red-400 hover:text-red-300 underline -mt-3 mb-4"
+            >
+              Cầu thủ này chưa có dữ liệu gì — xóa vĩnh viễn thay vì vô hiệu hóa?
+            </button>
+          ) : null}
+        </ConfirmDialog>
+      ) : (
+        <ConfirmDialog
+          isOpen={!!deleteTarget}
+          title="Xóa vĩnh viễn cầu thủ"
+          message={`Cầu thủ "${deleteTarget?.name}" chưa có dữ liệu điểm danh/thành tích/đóng góp nào. Xóa vĩnh viễn sẽ xóa hẳn khỏi hệ thống và KHÔNG THỂ hoàn tác.`}
+          confirmLabel="Xóa vĩnh viễn"
+          onConfirm={handleHardDelete}
+          onCancel={closeDeleteDialog}
+        >
+          <button
+            type="button"
+            onClick={() => setDeleteMode('deactivate')}
+            className="text-xs text-white/40 hover:text-white/70 underline -mt-3 mb-4"
+          >
+            ← Quay lại vô hiệu hóa
+          </button>
+        </ConfirmDialog>
+      )}
     </div>
   );
 };

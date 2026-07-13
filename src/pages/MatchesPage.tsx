@@ -2,6 +2,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { Plus, Pencil, Trash2, MapPin, Calendar, FileText } from 'lucide-react';
 import { matchService } from '../services/matchService';
+import { attendanceService } from '../services/attendanceService';
+import { performanceService } from '../services/performanceService';
 import type { Match, MatchFormData } from '../types';
 import { Modal } from '../components/ui/Modal';
 import { Button } from '../components/ui/Button';
@@ -23,6 +25,12 @@ export const MatchesPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMatch, setEditingMatch] = useState<Match | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Match | null>(null);
+  const [deleteImpact, setDeleteImpact] = useState<{
+    attendance: number;
+    scorers: number;
+    goalkeepers: number;
+    defenders: number;
+  } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
@@ -70,13 +78,53 @@ export const MatchesPage: React.FC = () => {
     }
   };
 
+  const openDeleteDialog = async (match: Match) => {
+    setDeleteTarget(match);
+    setDeleteImpact(null);
+    try {
+      const [attendance, performances, gkStats, defenders] = await Promise.all([
+        attendanceService.getByMatch(match.id),
+        performanceService.getByMatch(match.id),
+        performanceService.getGoalkeeperStats(match.id),
+        performanceService.getDefenders(match.id),
+      ]);
+      setDeleteImpact({
+        attendance: attendance?.records.length ?? 0,
+        scorers: performances.filter((p) => p.goals > 0 || p.assists > 0).length,
+        goalkeepers: gkStats.length,
+        defenders: defenders.length,
+      });
+    } catch {
+      setDeleteImpact({ attendance: 0, scorers: 0, goalkeepers: 0, defenders: 0 });
+    }
+  };
+
+  const closeDeleteDialog = () => {
+    setDeleteTarget(null);
+    setDeleteImpact(null);
+  };
+
   const handleDelete = async () => {
     if (!deleteTarget) return;
-    await matchService.delete(deleteTarget.id);
-    addToast(`Đã xóa trận đấu vs ${deleteTarget.opponent}`, 'success');
-    setDeleteTarget(null);
-    load();
+    try {
+      await matchService.delete(deleteTarget.id);
+      addToast(`Đã xóa trận đấu vs ${deleteTarget.opponent}`, 'success');
+      closeDeleteDialog();
+      load();
+    } catch {
+      addToast('Có lỗi xảy ra!', 'error');
+    }
   };
+
+  const deleteMessage = (() => {
+    if (!deleteTarget) return '';
+    if (!deleteImpact) return 'Đang kiểm tra dữ liệu liên quan...';
+    const { attendance, scorers, goalkeepers, defenders } = deleteImpact;
+    if (attendance === 0 && scorers === 0 && goalkeepers === 0 && defenders === 0) {
+      return `Bạn có chắc muốn xóa trận đấu "vs ${deleteTarget.opponent}"? Trận này chưa có dữ liệu điểm danh/thành tích nào.`;
+    }
+    return `Xóa trận đấu "vs ${deleteTarget.opponent}" sẽ xóa VĨNH VIỄN ${attendance} lượt điểm danh, ${scorers} cầu thủ ghi bàn/kiến tạo, ${goalkeepers} thủ môn, ${defenders} hậu vệ đã ghi nhận cho trận này. Hành động không thể hoàn tác.`;
+  })();
 
   const filtered = matches.filter(
     (m) =>
@@ -133,7 +181,7 @@ export const MatchesPage: React.FC = () => {
                         <Pencil className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => setDeleteTarget(match)}
+                        onClick={() => openDeleteDialog(match)}
                         className="w-9 h-9 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all flex items-center justify-center"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -238,9 +286,9 @@ export const MatchesPage: React.FC = () => {
       <ConfirmDialog
         isOpen={!!deleteTarget}
         title="Xóa trận đấu"
-        message={`Bạn có chắc muốn xóa trận đấu "vs ${deleteTarget?.opponent}"?`}
+        message={deleteMessage}
         onConfirm={handleDelete}
-        onCancel={() => setDeleteTarget(null)}
+        onCancel={closeDeleteDialog}
       />
     </div>
   );
