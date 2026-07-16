@@ -71,9 +71,14 @@ export const AttendancePage: React.FC = () => {
     });
   };
 
+  // Active players are always offered for check-in; an inactive player only
+  // stays visible if this match already has a saved record for them, so
+  // re-saving attendance doesn't silently drop their historical status.
+  const rosterPlayers = players.filter((p) => p.isActive || records.has(p.id));
+
   const markAll = (status: AttendanceStatus) => {
     const next = new Map<string, AttendanceStatus>();
-    players.forEach((p) => next.set(p.id, status));
+    rosterPlayers.forEach((p) => next.set(p.id, status));
     setRecords(next);
   };
 
@@ -81,7 +86,7 @@ export const AttendancePage: React.FC = () => {
     if (!selectedMatchId) return;
     setIsSaving(true);
     try {
-      const recordList: AttendanceRecord[] = players.map((p) => ({
+      const recordList: AttendanceRecord[] = rosterPlayers.map((p) => ({
         playerId: p.id,
         status: records.get(p.id) || 'absent',
       }));
@@ -98,7 +103,7 @@ export const AttendancePage: React.FC = () => {
   const selectedMatch = matches.find((m) => m.id === selectedMatchId);
   const presentCount = [...records.values()].filter((s) => s === 'present').length;
   const absentCount = [...records.values()].filter((s) => s === 'absent').length;
-  const visiblePlayers = isPlayer ? players.filter((p) => p.id === user?.playerId) : players;
+  const visiblePlayers = isPlayer ? rosterPlayers.filter((p) => p.id === user?.playerId) : rosterPlayers;
 
   return (
     <div className="space-y-5">
