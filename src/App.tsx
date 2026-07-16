@@ -13,6 +13,7 @@ import { StatisticsPage } from "./pages/StatisticsPage";
 import { PerformancePage } from "./pages/PerformancePage";
 import { ContributionsPage } from "./pages/ContributionsPage";
 import { ContributionDetailPage } from "./pages/ContributionDetailPage";
+import { ChatPage } from "./pages/ChatPage";
 
 function App() {
   return (
@@ -36,6 +37,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route path="/chat" element={<ChatPage />} />
               <Route path="/contributions" element={<ContributionsPage />} />
               <Route path="/contributions/:id" element={<ContributionDetailPage />} />
             </Route>
