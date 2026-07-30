@@ -135,7 +135,19 @@ export const AttendancePage: React.FC = () => {
               📅 {dayjs(selectedMatch.date).format('dddd, DD/MM/YYYY')}
             </span>
             <span className="text-xs text-white/40">
-              📍 {selectedMatch.venue}
+              📍{' '}
+              {selectedMatch.locationUrl ? (
+                <a
+                  href={selectedMatch.locationUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-emerald-400 underline underline-offset-2"
+                >
+                  {selectedMatch.venue}
+                </a>
+              ) : (
+                selectedMatch.venue
+              )}
             </span>
             {savedAt && (
               <span className="flex items-center gap-1 text-xs text-emerald-400">

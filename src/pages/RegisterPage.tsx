@@ -10,7 +10,6 @@ import { authService } from '../services/authService';
 import type { Player } from '../types';
 
 interface RegisterFormData {
-  accountType: 'User' | 'Player';
   username: string;
   password: string;
   confirmPassword: string;
@@ -30,38 +29,28 @@ export const RegisterPage: React.FC = () => {
     handleSubmit,
     watch,
     formState: { errors },
-  } = useForm<RegisterFormData>({ defaultValues: { accountType: 'User' } });
+  } = useForm<RegisterFormData>();
 
-  const accountType = watch('accountType');
   const password = watch('password');
 
   useEffect(() => {
-    if (accountType !== 'Player') return;
     setLoadingPlayers(true);
     authService
       .getAvailablePlayersForRegistration()
       .then(setAvailablePlayers)
       .catch(() => addToast('Không thể tải danh sách cầu thủ!', 'error'))
       .finally(() => setLoadingPlayers(false));
-  }, [accountType, addToast]);
+  }, [addToast]);
 
   const onSubmit = async (data: RegisterFormData) => {
     setIsSubmitting(true);
     try {
-      if (data.accountType === 'Player') {
-        await registerAccount({
-          role: 'Player',
-          username: data.username,
-          password: data.password,
-          playerId: data.playerId,
-        });
-      } else {
-        await registerAccount({
-          role: 'User',
-          username: data.username,
-          password: data.password,
-        });
-      }
+      await registerAccount({
+        role: 'Player',
+        username: data.username,
+        password: data.password,
+        playerId: data.playerId,
+      });
       addToast('Đăng ký thành công!', 'success');
       navigate('/');
     } catch (err) {
@@ -86,27 +75,16 @@ export const RegisterPage: React.FC = () => {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <Select
-            label="Loại tài khoản"
-            {...register('accountType')}
+            label="Chọn cầu thủ"
+            {...register('playerId', { required: 'Vui lòng chọn cầu thủ' })}
+            error={errors.playerId?.message}
+            required
+            disabled={loadingPlayers}
             options={[
-              { value: 'User', label: 'Người xem' },
-              { value: 'Player', label: 'Cầu thủ' },
+              { value: '', label: loadingPlayers ? 'Đang tải...' : '-- Chọn cầu thủ --' },
+              ...availablePlayers.map((p) => ({ value: p.id, label: `#${p.jerseyNumber} ${p.name}` })),
             ]}
           />
-
-          {accountType === 'Player' && (
-            <Select
-              label="Chọn cầu thủ"
-              {...register('playerId', { required: 'Vui lòng chọn cầu thủ' })}
-              error={errors.playerId?.message}
-              required
-              disabled={loadingPlayers}
-              options={[
-                { value: '', label: loadingPlayers ? 'Đang tải...' : '-- Chọn cầu thủ --' },
-                ...availablePlayers.map((p) => ({ value: p.id, label: `#${p.jerseyNumber} ${p.name}` })),
-              ]}
-            />
-          )}
 
           <Input
             label="Tên đăng nhập"

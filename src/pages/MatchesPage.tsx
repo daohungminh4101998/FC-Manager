@@ -1,20 +1,41 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
-import { Plus, Pencil, Trash2, MapPin, Calendar, FileText } from 'lucide-react';
+import { Plus, Pencil, Trash2, MapPin, Calendar, FileText, Video } from 'lucide-react';
 import { matchService } from '../services/matchService';
 import { attendanceService } from '../services/attendanceService';
 import { performanceService } from '../services/performanceService';
-import type { Match, MatchFormData } from '../types';
+import type { Match, MatchFormData, MatchResult } from '../types';
 import { Modal } from '../components/ui/Modal';
 import { Button } from '../components/ui/Button';
-import { Input, Textarea } from '../components/ui/FormControls';
+import { Input, Textarea, Select } from '../components/ui/FormControls';
 import { SearchInput } from '../components/ui/SearchInput';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { Badge } from '../components/ui/Badge';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
+import { getYouTubeEmbedUrl } from '../utils/youtube';
 import dayjs from 'dayjs';
 import { Link } from 'react-router-dom';
+
+type BadgeVariant = 'emerald' | 'blue' | 'amber' | 'red' | 'purple' | 'gray';
+
+const resultMeta: Record<MatchResult, { label: string; variant: BadgeVariant }> = {
+  Win: { label: 'Thắng', variant: 'emerald' },
+  Draw: { label: 'Hoà', variant: 'amber' },
+  Loss: { label: 'Thua', variant: 'red' },
+};
+
+interface MatchFormValues {
+  opponent: string;
+  date: string;
+  venue: string;
+  note: string;
+  result: '' | MatchResult;
+  locationUrl: string;
+  highlightUrl: string;
+}
+
+const URL_PATTERN = { value: /^https?:\/\/.+/i, message: 'URL không hợp lệ' };
 
 export const MatchesPage: React.FC = () => {
   const { addToast } = useToast();
@@ -33,12 +54,17 @@ export const MatchesPage: React.FC = () => {
   } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [highlightMatch, setHighlightMatch] = useState<Match | null>(null);
+
   const {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
-  } = useForm<MatchFormData>();
+  } = useForm<MatchFormValues>();
+
+  const watchedResult = watch('result');
 
   const load = useCallback(async () => {
     const data = await matchService.getAll();
@@ -49,24 +75,41 @@ export const MatchesPage: React.FC = () => {
 
   const openCreate = () => {
     setEditingMatch(null);
-    reset({ opponent: '', date: dayjs().format('YYYY-MM-DD'), venue: '', note: '' });
+    reset({ opponent: '', date: dayjs().format('YYYY-MM-DD'), venue: '', note: '', result: '', locationUrl: '', highlightUrl: '' });
     setIsModalOpen(true);
   };
 
   const openEdit = (m: Match) => {
     setEditingMatch(m);
-    reset({ opponent: m.opponent, date: m.date, venue: m.venue, note: m.note || '' });
+    reset({
+      opponent: m.opponent,
+      date: m.date,
+      venue: m.venue,
+      note: m.note || '',
+      result: m.result || '',
+      locationUrl: m.locationUrl || '',
+      highlightUrl: m.highlightUrl || '',
+    });
     setIsModalOpen(true);
   };
 
-  const onSubmit = async (data: MatchFormData) => {
+  const onSubmit = async (data: MatchFormValues) => {
     setIsSubmitting(true);
+    const payload: MatchFormData = {
+      opponent: data.opponent,
+      date: data.date,
+      venue: data.venue,
+      note: data.note,
+      result: data.result || null,
+      locationUrl: data.locationUrl || null,
+      highlightUrl: data.highlightUrl || null,
+    };
     try {
       if (editingMatch) {
-        await matchService.update(editingMatch.id, data);
+        await matchService.update(editingMatch.id, payload);
         addToast('Cập nhật trận đấu thành công!', 'success');
       } else {
-        await matchService.create(data);
+        await matchService.create(payload);
         addToast('Thêm trận đấu thành công!', 'success');
       }
       setIsModalOpen(false);
@@ -168,9 +211,15 @@ export const MatchesPage: React.FC = () => {
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    <Badge variant={upcoming ? 'emerald' : 'gray'}>
-                      {upcoming ? 'Sắp diễn ra' : 'Đã đấu'}
-                    </Badge>
+                    {match.result ? (
+                      <Badge variant={resultMeta[match.result].variant}>
+                        {resultMeta[match.result].label}
+                      </Badge>
+                    ) : (
+                      <Badge variant={upcoming ? 'emerald' : 'gray'}>
+                        {upcoming ? 'Sắp diễn ra' : 'Đã đấu'}
+                      </Badge>
+                    )}
                   </div>
                   {isAdmin && (
                     <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
@@ -201,7 +250,18 @@ export const MatchesPage: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-white/60">
                     <MapPin className="w-4 h-4 text-emerald-400 shrink-0" />
-                    {match.venue}
+                    {match.locationUrl ? (
+                      <a
+                        href={match.locationUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:text-emerald-400 underline underline-offset-2"
+                      >
+                        {match.venue}
+                      </a>
+                    ) : (
+                      match.venue
+                    )}
                   </div>
                   {match.note && (
                     <div className="flex items-start gap-2 text-sm text-white/40">
@@ -229,6 +289,17 @@ export const MatchesPage: React.FC = () => {
                     >
                       Cập nhật sau trận
                     </Link>
+                  )}
+                  {match.highlightUrl && (
+                    <button
+                      onClick={() => setHighlightMatch(match)}
+                      className="flex-1 flex items-center justify-center gap-1.5 min-h-[40px] text-center py-2 rounded-lg text-xs font-medium
+                        bg-red-500/10 text-red-400 border border-red-500/20
+                        hover:bg-red-500/20 transition-colors"
+                    >
+                      <Video className="w-3.5 h-3.5" />
+                      Highlight
+                    </button>
                   )}
                 </div>
               </div>
@@ -271,6 +342,30 @@ export const MatchesPage: React.FC = () => {
             placeholder="Ghi chú về trận đấu..."
             {...register('note')}
           />
+          <Select
+            label="Kết quả"
+            {...register('result')}
+            options={[
+              { value: '', label: '-- Chưa cập nhật --' },
+              { value: 'Win', label: 'Thắng' },
+              { value: 'Draw', label: 'Hoà' },
+              { value: 'Loss', label: 'Thua' },
+            ]}
+          />
+          <Input
+            label="Link địa điểm (Google Maps)"
+            placeholder="https://maps.google.com/..."
+            {...register('locationUrl', { pattern: URL_PATTERN })}
+            error={errors.locationUrl?.message}
+          />
+          {watchedResult && (
+            <Input
+              label="Link highlight (YouTube)"
+              placeholder="https://youtube.com/watch?v=..."
+              {...register('highlightUrl', { pattern: URL_PATTERN })}
+              error={errors.highlightUrl?.message}
+            />
+          )}
           <div className="flex gap-3 justify-end pt-2">
             <Button variant="secondary" type="button" onClick={() => setIsModalOpen(false)}>
               Hủy
@@ -290,6 +385,39 @@ export const MatchesPage: React.FC = () => {
         onConfirm={handleDelete}
         onCancel={closeDeleteDialog}
       />
+
+      {/* Highlight Modal */}
+      {highlightMatch && (
+        <Modal
+          isOpen={!!highlightMatch}
+          onClose={() => setHighlightMatch(null)}
+          title={`Highlight vs ${highlightMatch.opponent}`}
+          size="lg"
+        >
+          {(() => {
+            const embedUrl = highlightMatch.highlightUrl ? getYouTubeEmbedUrl(highlightMatch.highlightUrl) : null;
+            return embedUrl ? (
+              <div className="aspect-video w-full">
+                <iframe
+                  src={embedUrl}
+                  className="w-full h-full rounded-lg"
+                  allowFullScreen
+                  title={`Highlight vs ${highlightMatch.opponent}`}
+                />
+              </div>
+            ) : (
+              <a
+                href={highlightMatch.highlightUrl ?? undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
+              >
+                Xem link gốc
+              </a>
+            );
+          })()}
+        </Modal>
+      )}
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { Bell, LogOut, Menu } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Bell, LogIn, LogOut, Menu } from 'lucide-react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/vi';
 import { useAuth } from '../../contexts/AuthContext';
@@ -73,15 +73,25 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           </div>
         )}
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-green-600 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-emerald-500/20 shrink-0">
-          {user ? user.username.charAt(0).toUpperCase() : 'A'}
+          {user ? user.username.charAt(0).toUpperCase() : '?'}
         </div>
-        <button
-          onClick={handleLogout}
-          title="Đăng xuất"
-          className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0"
-        >
-          <LogOut className="w-4 h-4" />
-        </button>
+        {user ? (
+          <button
+            onClick={handleLogout}
+            title="Đăng xuất"
+            className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        ) : (
+          <Link
+            to="/login"
+            title="Đăng nhập"
+            className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all shrink-0"
+          >
+            <LogIn className="w-4 h-4" />
+          </Link>
+        )}
       </div>
     </header>
   );
