@@ -37,7 +37,14 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route path="/chat" element={<ChatPage />} />
+              <Route
+                path="/chat"
+                element={
+                  <ProtectedRoute requireAuth>
+                    <ChatPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="/contributions" element={<ContributionsPage />} />
               <Route path="/contributions/:id" element={<ContributionDetailPage />} />
             </Route>

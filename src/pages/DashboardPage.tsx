@@ -1,13 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Calendar, Goal, Handshake, TrendingUp, ChevronRight, Trophy, Activity } from 'lucide-react';
+import { Users, Calendar, Goal, Handshake, TrendingUp, ChevronRight, Trophy, Activity, Flame } from 'lucide-react';
 import { playerService } from '../services/playerService';
 import { matchService } from '../services/matchService';
 import { performanceService } from '../services/performanceService';
 import { contributionService } from '../services/contributionService';
-import type { Player, Match } from '../types';
+import type { Player, Match, MatchResult } from '../types';
 import dayjs from 'dayjs';
 import { useToast } from '../contexts/ToastContext';
+import { Badge } from '../components/ui/Badge';
+
+type BadgeVariant = 'emerald' | 'blue' | 'amber' | 'red' | 'purple' | 'gray';
+
+const resultMeta: Record<MatchResult, { label: string; variant: BadgeVariant }> = {
+  Win: { label: 'Thắng', variant: 'emerald' },
+  Draw: { label: 'Hoà', variant: 'amber' },
+  Loss: { label: 'Thua', variant: 'red' },
+};
 
 interface StatsCard {
   label: string;
@@ -64,7 +73,7 @@ export const DashboardPage: React.FC = () => {
           totalAssists,
         });
         setPlayers(ps);
-        setMatches(ms.slice(0, 5));
+        setMatches(ms);
       } catch (err) {
         console.error('Failed to load dashboard data', err);
         addToast('Không thể tải dữ liệu tổng quan!', 'error');
@@ -147,6 +156,12 @@ export const DashboardPage: React.FC = () => {
   }
   const nextMatch = matches.find((m) => dayjs(m.date).isAfter(dayjs()));
   const recentMatches = matches.filter((m) => !dayjs(m.date).isAfter(dayjs())).slice(0, 4);
+  const matchesWithResult = matches.filter((m) => m.result);
+  const winCount = matchesWithResult.filter((m) => m.result === 'Win').length;
+  const winRate = matchesWithResult.length > 0
+    ? Math.round((winCount / matchesWithResult.length) * 1000) / 10
+    : 0;
+  const last5Results = matchesWithResult.slice(0, 5);
 
   return (
     <div className="space-y-6">
@@ -272,6 +287,27 @@ export const DashboardPage: React.FC = () => {
             </div>
           )}
 
+          {/* Recent Form */}
+          {matchesWithResult.length > 0 && (
+            <div className="bg-gray-900/60 border border-white/10 rounded-2xl p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Flame className="w-4 h-4 text-red-400" />
+                <h3 className="text-sm font-semibold text-white">Phong độ gần đây</h3>
+              </div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs text-white/40">Tỷ lệ thắng</span>
+                <span className="text-lg font-bold text-emerald-400">{winRate}%</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {last5Results.map((m) => (
+                  <Badge key={m.id} variant={resultMeta[m.result!].variant} size="sm">
+                    {resultMeta[m.result!].label}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Top Players */}
           <div className="bg-gray-900/60 border border-white/10 rounded-2xl p-5">
             <div className="flex items-center justify-between mb-4">
@@ -333,9 +369,16 @@ export const DashboardPage: React.FC = () => {
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">
-                      vs {match.opponent}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-white truncate">
+                        vs {match.opponent}
+                      </p>
+                      {match.result && (
+                        <Badge variant={resultMeta[match.result].variant} size="sm">
+                          {resultMeta[match.result].label}
+                        </Badge>
+                      )}
+                    </div>
                     <p className="text-xs text-white/40 truncate">📍 {match.venue}</p>
                   </div>
                   <Link

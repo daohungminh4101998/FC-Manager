@@ -10,6 +10,9 @@ export function mapMatchRow(row: any): Match {
     venue: row.venue,
     note: row.note,
     createdAt: row.created_at,
+    result: row.result,
+    locationUrl: row.location_url,
+    highlightUrl: row.highlight_url,
   };
 }
 
@@ -48,6 +51,9 @@ export const matchService = {
         match_date: formData.date,
         venue: formData.venue,
         note: formData.note,
+        result: formData.result ?? null,
+        location_url: formData.locationUrl ?? null,
+        highlight_url: formData.highlightUrl ?? null,
       })
       .select()
       .single();
@@ -65,6 +71,9 @@ export const matchService = {
         match_date: formData.date,
         venue: formData.venue,
         note: formData.note,
+        result: formData.result ?? null,
+        location_url: formData.locationUrl ?? null,
+        highlight_url: formData.highlightUrl ?? null,
       })
       .eq('id', id)
       .select()

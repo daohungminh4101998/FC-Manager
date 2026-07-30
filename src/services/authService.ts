@@ -51,15 +51,11 @@ export const authService = {
   },
 
   register: async (payload: RegisterPayload): Promise<AuthUser> => {
-    if (payload.role !== "User" && payload.role !== "Player") {
-      throw new Error("Không được phép đăng ký loại tài khoản này");
-    }
-
     if (await usernameExists(payload.username)) {
       throw new Error("Tên đăng nhập đã tồn tại");
     }
 
-    if (payload.role === "Player" && (await playerHasAccount(payload.playerId))) {
+    if (await playerHasAccount(payload.playerId)) {
       throw new Error("Cầu thủ này đã có tài khoản");
     }
 
@@ -68,8 +64,8 @@ export const authService = {
       .insert({
         username: payload.username,
         password_hash: payload.password,
-        role: payload.role,
-        player_id: payload.role === "Player" ? payload.playerId : null,
+        role: "Player",
+        player_id: payload.playerId,
       })
       .select("id, username, role, player_id")
       .single();

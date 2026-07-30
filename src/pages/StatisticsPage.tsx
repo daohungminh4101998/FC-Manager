@@ -8,6 +8,7 @@ import type {
   PlayerStats,
   Player,
   Match,
+  MatchResult,
   Attendance,
   MatchPerformance,
   GoalkeeperStat,
@@ -17,10 +18,63 @@ import { SearchInput } from '../components/ui/SearchInput';
 import { Badge } from '../components/ui/Badge';
 import { PlayerDetailModal, type DetailTab } from '../components/ui/PlayerDetailModal';
 import { MatchStatModal, type MatchStatRow } from '../components/ui/MatchStatModal';
-import { Goal, Handshake, Calendar, XCircle, TrendingUp, X, Shield, Users } from 'lucide-react';
+import { Goal, Handshake, Calendar, XCircle, TrendingUp, X, Shield, Users, Trophy, Flame, ShieldCheck } from 'lucide-react';
 
 type SortKey = 'name' | 'matchesPlayed' | 'matchesAbsent' | 'totalGoals' | 'totalAssists' | 'totalGoalsConceded';
 type YearFilter = 'all' | number;
+type BadgeVariant = 'emerald' | 'blue' | 'amber' | 'red' | 'purple' | 'gray';
+
+const resultMeta: Record<MatchResult, { label: string; variant: BadgeVariant }> = {
+  Win: { label: 'Thắng', variant: 'emerald' },
+  Draw: { label: 'Hoà', variant: 'amber' },
+  Loss: { label: 'Thua', variant: 'red' },
+};
+
+interface MatchResultSummary {
+  wins: number;
+  draws: number;
+  losses: number;
+  winRate: number;
+  longestWinStreak: number;
+  longestLossStreak: number;
+  longestUnbeatenStreak: number;
+  last5: Match[];
+}
+
+function computeResultSummary(matches: Match[]): MatchResultSummary {
+  const withResult = [...matches]
+    .filter((m) => m.result)
+    .sort((a, b) => dayjs(a.date).diff(dayjs(b.date)));
+
+  let wins = 0, draws = 0, losses = 0;
+  let curWin = 0, curLoss = 0, curUnbeaten = 0;
+  let maxWin = 0, maxLoss = 0, maxUnbeaten = 0;
+
+  withResult.forEach((m) => {
+    if (m.result === 'Win') {
+      wins++; curWin++; curUnbeaten++; curLoss = 0;
+    } else if (m.result === 'Draw') {
+      draws++; curUnbeaten++; curWin = 0; curLoss = 0;
+    } else {
+      losses++; curLoss++; curWin = 0; curUnbeaten = 0;
+    }
+    maxWin = Math.max(maxWin, curWin);
+    maxLoss = Math.max(maxLoss, curLoss);
+    maxUnbeaten = Math.max(maxUnbeaten, curUnbeaten);
+  });
+
+  const total = wins + draws + losses;
+  return {
+    wins,
+    draws,
+    losses,
+    winRate: total > 0 ? Math.round((wins / total) * 1000) / 10 : 0,
+    longestWinStreak: maxWin,
+    longestLossStreak: maxLoss,
+    longestUnbeatenStreak: maxUnbeaten,
+    last5: withResult.slice(-5).reverse(),
+  };
+}
 
 interface DetailState {
   playerStats: PlayerStats;
@@ -104,6 +158,26 @@ export const StatisticsPage: React.FC = () => {
     () => allDefenders.filter((d) => year === 'all' || dayjs(d.match.date).year() === year),
     [allDefenders, year]
   );
+
+  const yearMatches = useMemo(
+    () => allMatches.filter((m) => year === 'all' || dayjs(m.date).year() === year),
+    [allMatches, year]
+  );
+
+  const resultSummary = useMemo(() => computeResultSummary(yearMatches), [yearMatches]);
+
+  const seasonSummaries = useMemo(() => {
+    const byYear = new Map<number, Match[]>();
+    allMatches.forEach((m) => {
+      const y = dayjs(m.date).year();
+      const list = byYear.get(y) ?? [];
+      list.push(m);
+      byYear.set(y, list);
+    });
+    return [...byYear.entries()]
+      .map(([y, ms]) => ({ year: y, ...computeResultSummary(ms) }))
+      .sort((a, b) => b.year - a.year);
+  }, [allMatches]);
 
   const stats: PlayerStats[] = useMemo(() => {
     return players.map((player) => {
@@ -272,6 +346,69 @@ export const StatisticsPage: React.FC = () => {
           ))}
         </select>
       </div>
+
+      {/* Match Result Summary */}
+      {(resultSummary.wins + resultSummary.draws + resultSummary.losses) > 0 && (
+        <div className="bg-gray-900/60 border border-white/10 rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Trophy className="w-4 h-4 text-emerald-400" />
+            <h3 className="text-sm font-semibold text-white">Kết quả trận đấu</h3>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <div className="text-center p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-xl">
+              <p className="text-2xl font-black text-emerald-400">{resultSummary.wins}</p>
+              <p className="text-xs text-white/40 mt-1">Thắng</p>
+            </div>
+            <div className="text-center p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl">
+              <p className="text-2xl font-black text-amber-400">{resultSummary.draws}</p>
+              <p className="text-xs text-white/40 mt-1">Hoà</p>
+            </div>
+            <div className="text-center p-3 bg-red-500/5 border border-red-500/20 rounded-xl">
+              <p className="text-2xl font-black text-red-400">{resultSummary.losses}</p>
+              <p className="text-xs text-white/40 mt-1">Thua</p>
+            </div>
+            <div className="text-center p-3 bg-blue-500/5 border border-blue-500/20 rounded-xl">
+              <p className="text-2xl font-black text-blue-400">{resultSummary.winRate}%</p>
+              <p className="text-xs text-white/40 mt-1">Tỷ lệ thắng</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+            <div className="flex items-center justify-between p-3 bg-white/3 rounded-xl">
+              <span className="text-xs text-white/40 flex items-center gap-1.5">
+                <Flame className="w-3.5 h-3.5 text-emerald-400" />
+                Chuỗi thắng dài nhất
+              </span>
+              <span className="text-sm font-bold text-white">{resultSummary.longestWinStreak}</span>
+            </div>
+            <div className="flex items-center justify-between p-3 bg-white/3 rounded-xl">
+              <span className="text-xs text-white/40 flex items-center gap-1.5">
+                <Flame className="w-3.5 h-3.5 text-red-400" />
+                Chuỗi thua dài nhất
+              </span>
+              <span className="text-sm font-bold text-white">{resultSummary.longestLossStreak}</span>
+            </div>
+            <div className="flex items-center justify-between p-3 bg-white/3 rounded-xl">
+              <span className="text-xs text-white/40 flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+                Chuỗi không thua dài nhất
+              </span>
+              <span className="text-sm font-bold text-white">{resultSummary.longestUnbeatenStreak}</span>
+            </div>
+          </div>
+          {resultSummary.last5.length > 0 && (
+            <div>
+              <p className="text-xs text-white/40 mb-2">5 trận gần nhất</p>
+              <div className="flex items-center gap-1.5">
+                {resultSummary.last5.map((m) => (
+                  <Badge key={m.id} variant={resultMeta[m.result!].variant} size="sm">
+                    {resultMeta[m.result!].label}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Highlight Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -697,6 +834,42 @@ export const StatisticsPage: React.FC = () => {
                       <td className="px-5 py-3 text-white/30 text-xs">{i + 1}</td>
                       <td className="px-5 py-3 text-white font-medium">{r.player.name}</td>
                       <td className="px-5 py-3 text-center text-emerald-400 font-bold">{r.matchesCount}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Table 5 — Kết quả theo mùa */}
+        <div className="lg:col-span-2 bg-gray-900/60 border border-white/10 rounded-2xl overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-white/5 flex items-center gap-2">
+            <Trophy className="w-4 h-4 text-emerald-400" />
+            <h3 className="text-sm font-semibold text-white">Kết quả theo mùa</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/5">
+                  <th className="px-5 py-3 text-left text-xs font-medium text-white/40 uppercase">Mùa</th>
+                  <th className="px-5 py-3 text-center text-xs font-medium text-white/40 uppercase">Thắng</th>
+                  <th className="px-5 py-3 text-center text-xs font-medium text-white/40 uppercase">Hoà</th>
+                  <th className="px-5 py-3 text-center text-xs font-medium text-white/40 uppercase">Thua</th>
+                  <th className="px-5 py-3 text-center text-xs font-medium text-white/40 uppercase">Tỷ lệ thắng</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {seasonSummaries.length === 0 ? (
+                  <tr><td colSpan={5} className="px-5 py-6 text-center text-white/30 text-sm">Chưa có dữ liệu</td></tr>
+                ) : (
+                  seasonSummaries.map((s) => (
+                    <tr key={s.year} className="hover:bg-white/3 transition-colors">
+                      <td className="px-5 py-3 text-white font-medium">{s.year}</td>
+                      <td className="px-5 py-3 text-center text-emerald-400 font-semibold">{s.wins}</td>
+                      <td className="px-5 py-3 text-center text-amber-400 font-semibold">{s.draws}</td>
+                      <td className="px-5 py-3 text-center text-red-400 font-semibold">{s.losses}</td>
+                      <td className="px-5 py-3 text-center text-blue-400 font-bold">{s.winRate}%</td>
                     </tr>
                   ))
                 )}

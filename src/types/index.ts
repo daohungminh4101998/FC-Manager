@@ -18,6 +18,8 @@ export type PlayerFormData = Omit<Player, 'id' | 'createdAt' | 'isActive'>;
 // =====================
 // Match Types
 // =====================
+export type MatchResult = 'Win' | 'Draw' | 'Loss';
+
 export interface Match {
   id: string;
   opponent: string;
@@ -25,6 +27,9 @@ export interface Match {
   venue: string;
   note?: string;
   createdAt: string;
+  result?: MatchResult | null;
+  locationUrl?: string | null;
+  highlightUrl?: string | null;
 }
 
 export type MatchFormData = Omit<Match, 'id' | 'createdAt'>;
@@ -145,6 +150,9 @@ export interface ContributionTransaction {
 // =====================
 // Auth Types
 // =====================
+// 'User' is legacy: the DB enum still has it (pre-existing rows may use it),
+// but it can no longer be self-registered and no new logic should target it —
+// such accounts fall through as read-only, same as an unauthenticated visitor.
 export type Role = 'Admin' | 'User' | 'Player';
 
 export interface AuthUser {
@@ -154,6 +162,4 @@ export interface AuthUser {
   playerId: string | null;
 }
 
-export type RegisterPayload =
-  | { role: 'User'; username: string; password: string }
-  | { role: 'Player'; username: string; password: string; playerId: string };
+export type RegisterPayload = { role: 'Player'; username: string; password: string; playerId: string };
