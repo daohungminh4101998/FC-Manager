@@ -9,6 +9,7 @@ import type { Player, Match, MatchResult } from '../types';
 import dayjs from 'dayjs';
 import { useToast } from '../contexts/ToastContext';
 import { Badge } from '../components/ui/Badge';
+import { VenueLink } from '../components/ui/VenueLink';
 
 type BadgeVariant = 'emerald' | 'blue' | 'amber' | 'red' | 'purple' | 'gray';
 
@@ -270,7 +271,9 @@ export const DashboardPage: React.FC = () => {
                   <p className="text-sm text-emerald-400 font-medium">
                     📅 {dayjs(nextMatch.date).format('DD/MM/YYYY')}
                   </p>
-                  <p className="text-xs text-white/50">📍 {nextMatch.venue}</p>
+                  <p className="text-xs text-white/50">
+                    📍 <VenueLink venue={nextMatch.venue} locationUrl={nextMatch.locationUrl} />
+                  </p>
                 </div>
                 {nextMatch.note && (
                   <p className="text-xs text-white/30 mt-2 italic">{nextMatch.note}</p>
@@ -379,7 +382,9 @@ export const DashboardPage: React.FC = () => {
                         </Badge>
                       )}
                     </div>
-                    <p className="text-xs text-white/40 truncate">📍 {match.venue}</p>
+                    <p className="text-xs text-white/40 truncate">
+                      📍 <VenueLink venue={match.venue} locationUrl={match.locationUrl} />
+                    </p>
                   </div>
                   <Link
                     to={`/attendance`}

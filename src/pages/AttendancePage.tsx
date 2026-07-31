@@ -7,6 +7,7 @@ import { attendanceService } from '../services/attendanceService';
 import type { Match, Player, AttendanceRecord, AttendanceStatus } from '../types';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { VenueLink } from '../components/ui/VenueLink';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import dayjs from 'dayjs';
@@ -135,19 +136,7 @@ export const AttendancePage: React.FC = () => {
               📅 {dayjs(selectedMatch.date).format('dddd, DD/MM/YYYY')}
             </span>
             <span className="text-xs text-white/40">
-              📍{' '}
-              {selectedMatch.locationUrl ? (
-                <a
-                  href={selectedMatch.locationUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-emerald-400 underline underline-offset-2"
-                >
-                  {selectedMatch.venue}
-                </a>
-              ) : (
-                selectedMatch.venue
-              )}
+              📍 <VenueLink venue={selectedMatch.venue} locationUrl={selectedMatch.locationUrl} />
             </span>
             {savedAt && (
               <span className="flex items-center gap-1 text-xs text-emerald-400">

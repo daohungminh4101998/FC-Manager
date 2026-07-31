@@ -3,6 +3,7 @@ import { X, Goal, Handshake, Calendar, MapPin, Trophy } from 'lucide-react';
 import type { Player, Match } from '../../types';
 import dayjs from 'dayjs';
 import 'dayjs/locale/vi';
+import { VenueLink } from './VenueLink';
 
 dayjs.locale('vi');
 
@@ -207,7 +208,7 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                         </span>
                         <span className="flex items-center gap-1 text-xs text-white/50">
                           <MapPin className="w-3 h-3 text-emerald-400" />
-                          {detail.match.venue}
+                          <VenueLink venue={detail.match.venue} locationUrl={detail.match.locationUrl} />
                         </span>
                       </div>
                       {detail.match.note && (
