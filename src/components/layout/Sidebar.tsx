@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Zap,
   CircleDollarSign,
+  Globe,
   X
 } from 'lucide-react';
 import clsx from 'clsx';
@@ -24,6 +25,7 @@ const navItems = [
   { to: '/statistics', icon: BarChart3, label: 'Thống kê' },
   { to: '/performance', icon: Trophy, label: 'Sau trận', adminOnly: true },
   { to: '/contributions', icon: CircleDollarSign, label: 'Đóng quỹ' },
+  { to: '/intro', icon: Globe, label: 'Giới thiệu CLB' },
 ];
 
 interface SidebarProps {
