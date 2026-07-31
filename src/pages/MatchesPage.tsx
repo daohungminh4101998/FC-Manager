@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
-import { Plus, Pencil, Trash2, MapPin, Calendar, FileText, Video } from 'lucide-react';
+import { Plus, Pencil, Trash2, MapPin, Calendar, FileText, Video, X } from 'lucide-react';
 import { matchService } from '../services/matchService';
 import { attendanceService } from '../services/attendanceService';
 import { performanceService } from '../services/performanceService';
@@ -11,6 +11,7 @@ import { Input, Textarea, Select } from '../components/ui/FormControls';
 import { SearchInput } from '../components/ui/SearchInput';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { Badge } from '../components/ui/Badge';
+import { VenueLink } from '../components/ui/VenueLink';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { getYouTubeEmbedUrl } from '../utils/youtube';
@@ -250,18 +251,7 @@ export const MatchesPage: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-white/60">
                     <MapPin className="w-4 h-4 text-emerald-400 shrink-0" />
-                    {match.locationUrl ? (
-                      <a
-                        href={match.locationUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:text-emerald-400 underline underline-offset-2"
-                      >
-                        {match.venue}
-                      </a>
-                    ) : (
-                      match.venue
-                    )}
+                    <VenueLink venue={match.venue} locationUrl={match.locationUrl} />
                   </div>
                   {match.note && (
                     <div className="flex items-start gap-2 text-sm text-white/40">
@@ -386,37 +376,51 @@ export const MatchesPage: React.FC = () => {
         onCancel={closeDeleteDialog}
       />
 
-      {/* Highlight Modal */}
+      {/* Highlight Viewer */}
       {highlightMatch && (
-        <Modal
-          isOpen={!!highlightMatch}
-          onClose={() => setHighlightMatch(null)}
-          title={`Highlight vs ${highlightMatch.opponent}`}
-          size="lg"
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm"
+          onClick={() => setHighlightMatch(null)}
         >
-          {(() => {
-            const embedUrl = highlightMatch.highlightUrl ? getYouTubeEmbedUrl(highlightMatch.highlightUrl) : null;
-            return embedUrl ? (
-              <div className="aspect-video w-full">
-                <iframe
-                  src={embedUrl}
-                  className="w-full h-full rounded-lg"
-                  allowFullScreen
-                  title={`Highlight vs ${highlightMatch.opponent}`}
-                />
-              </div>
-            ) : (
-              <a
-                href={highlightMatch.highlightUrl ?? undefined}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
-              >
-                Xem link gốc
-              </a>
-            );
-          })()}
-        </Modal>
+          <div
+            className="relative w-full sm:max-w-3xl px-0 sm:px-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setHighlightMatch(null)}
+              className="absolute -top-11 right-3 sm:-top-12 sm:right-4 w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-all"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            {(() => {
+              const embedUrl = highlightMatch.highlightUrl ? getYouTubeEmbedUrl(highlightMatch.highlightUrl) : null;
+              return embedUrl ? (
+                <div className="aspect-video w-full bg-black sm:rounded-xl overflow-hidden shadow-2xl">
+                  <iframe
+                    src={embedUrl}
+                    className="w-full h-full"
+                    allowFullScreen
+                    title={`Highlight vs ${highlightMatch.opponent}`}
+                  />
+                </div>
+              ) : (
+                <div className="bg-gray-900 border border-white/10 sm:rounded-xl p-8 text-center">
+                  <a
+                    href={highlightMatch.highlightUrl ?? undefined}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
+                  >
+                    Xem link gốc
+                  </a>
+                </div>
+              );
+            })()}
+            <p className="mt-3 px-4 sm:px-0 text-sm text-white/60 text-center sm:text-left">
+              vs {highlightMatch.opponent}
+            </p>
+          </div>
+        </div>
       )}
     </div>
   );

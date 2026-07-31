@@ -3,6 +3,7 @@ import { Calendar, MapPin } from 'lucide-react';
 import dayjs from 'dayjs';
 import type { Match, Player } from '../../types';
 import { Modal } from './Modal';
+import { VenueLink } from './VenueLink';
 
 interface MatchStatColumn {
   label: string;
@@ -51,7 +52,7 @@ export const MatchStatModal: React.FC<MatchStatModalProps> = ({
                   </span>
                   <span className="flex items-center gap-1 text-xs text-white/50">
                     <MapPin className="w-3 h-3 text-emerald-400" />
-                    {row.match.venue}
+                    <VenueLink venue={row.match.venue} locationUrl={row.match.locationUrl} />
                   </span>
                 </div>
               </div>

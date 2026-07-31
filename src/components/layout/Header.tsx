@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Bell, LogIn, LogOut, Menu } from 'lucide-react';
+import { Bell, User, LogOut, Menu } from 'lucide-react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/vi';
 import { useAuth } from '../../contexts/AuthContext';
@@ -82,6 +82,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0"
           >
             <LogOut className="w-4 h-4" />
+
           </button>
         ) : (
           <Link
@@ -89,7 +90,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             title="Đăng nhập"
             className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all shrink-0"
           >
-            <LogIn className="w-4 h-4" />
+            <User className="w-4 h-4" />
           </Link>
         )}
       </div>

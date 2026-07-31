@@ -9,6 +9,7 @@ import { performanceService } from "../services/performanceService";
 import type { Match, Player, MatchPerformanceInput, GoalkeeperStatInput } from "../types";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
+import { VenueLink } from "../components/ui/VenueLink";
 import { Input, Select } from "../components/ui/FormControls";
 import { useToast } from "../contexts/ToastContext";
 import dayjs from "dayjs";
@@ -232,7 +233,7 @@ export const PerformancePage: React.FC = () => {
         {selectedMatch && (
           <div className="mt-3 flex flex-wrap gap-3">
             <span className="text-xs text-white/40">
-              📍 {selectedMatch.venue}
+              📍 <VenueLink venue={selectedMatch.venue} locationUrl={selectedMatch.locationUrl} />
             </span>
             {savedAt && (
               <span className="flex items-center gap-1 text-xs text-emerald-400">
