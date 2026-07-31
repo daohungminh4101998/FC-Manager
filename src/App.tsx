@@ -5,6 +5,7 @@ import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AppLayout } from "./components/layout/AppLayout";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
+import { IntroPage } from "./pages/IntroPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { PlayersPage } from "./pages/PlayersPage";
 import { MatchesPage } from "./pages/MatchesPage";
@@ -23,6 +24,7 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/intro" element={<IntroPage />} />
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
               <Route path="/" element={<DashboardPage />} />
               <Route path="/players" element={<PlayersPage />} />
