@@ -2,25 +2,37 @@ name: Supabase Auto Backup
 
 on:
   schedule:
-    - cron: '0 2 * * *'  # chạy mỗi ngày lúc 2h sáng UTC
-  workflow_dispatch:       # cho phép chạy tay từ tab Actions
+    - cron: '0 2 * * *' # chạy mỗi ngày lúc 2h sáng UTC
+  workflow_dispatch: # cho phép chạy tay từ tab Actions
 
 jobs:
   backup:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Install PostgreSQL client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Install PostgreSQL client 17
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+
+      - name: Check pg_dump version
+        run: |
+          /usr/lib/postgresql/17/bin/pg_dump --version
 
       - name: Dump database
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           mkdir -p backups
-          pg_dump "${{ secrets.SUPABASE_DB_URL }}" \
-            --no-owner --no-privileges --clean --if-exists \
-            -f backups/backup-$(date +'%Y-%m-%d_%H-%M').sql
+          /usr/lib/postgresql/17/bin/pg_dump "$SUPABASE_DB_URL" \
+            --no-owner \
+            --no-privileges \
+            --clean \
+            --if-exists \
+            -f "backups/backup-$(date +'%Y-%m-%d_%H-%M').sql"
 
       - name: Commit and push backup
         run: |
