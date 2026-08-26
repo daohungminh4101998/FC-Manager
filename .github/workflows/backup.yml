@@ -2,6 +2,7 @@ name: Supabase Auto Backup
 
 on:
   schedule:
+    # Chạy mỗi ngày lúc 02:00 UTC = 09:00 giờ Việt Nam
     - cron: '0 2 * * *'
   workflow_dispatch:
 
@@ -11,49 +12,142 @@ permissions:
 jobs:
   backup:
     runs-on: ubuntu-latest
+
     steps:
+      # ==========================================
+      # 1. Checkout repository
+      # ==========================================
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      # ==========================================
+      # 2. Install PostgreSQL client 17
+      # ==========================================
       - name: Install PostgreSQL client 17
         run: |
           sudo apt-get update
-          sudo apt-get install -y curl ca-certificates gnupg
+
+          sudo apt-get install -y \
+            curl \
+            ca-certificates \
+            gnupg
+
           curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
             | sudo gpg --dearmor -o /usr/share/keyrings/postgresql.gpg
+
           echo "deb [signed-by=/usr/share/keyrings/postgresql.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
             | sudo tee /etc/apt/sources.list.d/pgdg.list
+
           sudo apt-get update
+
           sudo apt-get install -y postgresql-client-17
 
-      - name: Ensure pg_dump 17 is used (fix PATH priority)
+      # ==========================================
+      # 3. Ưu tiên PostgreSQL 17
+      # ==========================================
+      - name: Ensure PostgreSQL 17 is used
         run: |
-          # Ubuntu runner đã có sẵn pg_dump 16 trong /usr/bin.
-          # update-alternatives đôi khi không tự trỏ sang bản mới trong CI,
-          # nên ta ép PATH ưu tiên thư mục chứa bản 17.
           echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
 
-      - name: Check pg_dump version
-        run: pg_dump --version
+      # ==========================================
+      # 4. Check PostgreSQL versions
+      # ==========================================
+      - name: Check PostgreSQL versions
+        run: |
+          echo "pg_dump version:"
+          pg_dump --version
 
+          echo "psql version:"
+          psql --version
+
+      # ==========================================
+      # 5. Dump database
+      # ==========================================
       - name: Dump database
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           mkdir -p backups
+
+          TIMESTAMP=$(date +'%Y-%m-%d_%H-%M')
+
+          BACKUP_FILE="backups/backup-${TIMESTAMP}.sql"
+
+          echo "Starting database backup..."
+          echo "Output: ${BACKUP_FILE}"
+
           pg_dump "$SUPABASE_DB_URL" \
             --no-owner \
             --no-privileges \
             --clean \
             --if-exists \
-            -f "backups/backup-$(date +'%Y-%m-%d_%H-%M').sql"
+            -f "$BACKUP_FILE"
 
+          echo "Backup completed."
+
+          echo "Backup file information:"
+          ls -lh "$BACKUP_FILE"
+
+      # ==========================================
+      # 6. Tạo bản SQL dùng cho Supabase SQL Editor
+      # ==========================================
+      - name: Create SQL Editor compatible backup
+        run: |
+          for file in backups/backup-*.sql; do
+
+            # Bỏ qua file editor nếu workflow được chạy lại
+            if [[ "$file" == *"-editor.sql" ]]; then
+              continue
+            fi
+
+            EDITOR_FILE="${file%.sql}-editor.sql"
+
+            echo "Creating:"
+            echo "$EDITOR_FILE"
+
+            cp "$file" "$EDITOR_FILE"
+
+            # Xóa các psql meta-command
+            sed -i '/^\\restrict /d' "$EDITOR_FILE"
+            sed -i '/^\\unrestrict /d' "$EDITOR_FILE"
+            sed -i '/^\\connect /d' "$EDITOR_FILE"
+
+            echo "SQL Editor backup created."
+
+            echo "Editor backup information:"
+            ls -lh "$EDITOR_FILE"
+          done
+
+      # ==========================================
+      # 7. Kiểm tra backup không rỗng
+      # ==========================================
+      - name: Validate backup files
+        run: |
+          echo "Checking backup files..."
+
+          for file in backups/*.sql; do
+            if [ ! -s "$file" ]; then
+              echo "ERROR: Backup file is empty:"
+              echo "$file"
+              exit 1
+            fi
+
+            echo "OK:"
+            ls -lh "$file"
+          done
+
+      # ==========================================
+      # 8. Commit backup vào GitHub
+      # ==========================================
       - name: Commit and push backup
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
           git add backups/
+
           git commit \
             -m "Auto backup $(date +'%Y-%m-%d %H:%M')" \
-            || echo "No changes"
+            || echo "No changes to commit"
+
           git push
