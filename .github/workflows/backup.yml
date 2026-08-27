@@ -87,6 +87,7 @@ jobs:
             --clean \
             --if-exists \
             --inserts \
+            --schema=public \
             -f "$BACKUP_FILE"
 
           echo "Backup completed."
@@ -123,6 +124,15 @@ jobs:
             sed -i '/^\\unrestrict /d' "$EDITOR_FILE"
             sed -i '/^\\connect /d' "$EDITOR_FILE"
             sed -i '/^\\\.$/d' "$EDITOR_FILE"
+
+            # Xóa các câu lệnh liên quan đến event trigger
+            # nội bộ của Supabase (pgrst_drop_watch,
+            # pgrst_ddl_watch...) vì các trigger này
+            # thuộc sở hữu của supabase_admin, user
+            # thường không có quyền DROP/CREATE/ALTER
+            # => gây lỗi "must be owner of event trigger"
+            sed -i '/EVENT TRIGGER pgrst_/d' "$EDITOR_FILE"
+            sed -i '/ON EVENT TRIGGER pgrst_/d' "$EDITOR_FILE"
 
             echo "SQL Editor backup created."
 
