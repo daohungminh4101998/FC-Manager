@@ -62,6 +62,11 @@ jobs:
 
       # ==========================================
       # 5. Dump database
+      #    - Dùng --inserts để xuất dữ liệu dạng
+      #      câu lệnh INSERT thay vì COPY ... \.
+      #      => tránh lỗi khi paste vào SQL Editor
+      #         (SQL Editor không hiểu meta-command
+      #         \. của psql)
       # ==========================================
       - name: Dump database
         env:
@@ -81,6 +86,7 @@ jobs:
             --no-privileges \
             --clean \
             --if-exists \
+            --inserts \
             -f "$BACKUP_FILE"
 
           echo "Backup completed."
@@ -90,6 +96,11 @@ jobs:
 
       # ==========================================
       # 6. Tạo bản SQL dùng cho Supabase SQL Editor
+      #    - Xóa các psql meta-command còn sót lại
+      #      (\restrict, \unrestrict, \connect...)
+      #      Vì đã dùng --inserts nên không còn
+      #      khối COPY ... \. nữa, nhưng vẫn giữ
+      #      bước dọn dẹp này để an toàn.
       # ==========================================
       - name: Create SQL Editor compatible backup
         run: |
@@ -107,10 +118,11 @@ jobs:
 
             cp "$file" "$EDITOR_FILE"
 
-            # Xóa các psql meta-command
+            # Xóa các psql meta-command (bắt đầu bằng \)
             sed -i '/^\\restrict /d' "$EDITOR_FILE"
             sed -i '/^\\unrestrict /d' "$EDITOR_FILE"
             sed -i '/^\\connect /d' "$EDITOR_FILE"
+            sed -i '/^\\\.$/d' "$EDITOR_FILE"
 
             echo "SQL Editor backup created."
 
