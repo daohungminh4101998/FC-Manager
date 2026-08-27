@@ -6578,7 +6578,6 @@ CREATE EVENT TRIGGER issue_pg_net_access ON ddl_command_end
 -- Name: pgrst_ddl_watch; Type: EVENT TRIGGER; Schema: -; Owner: -
 --
 
-CREATE EVENT TRIGGER pgrst_ddl_watch ON ddl_command_end
    EXECUTE FUNCTION extensions.pgrst_ddl_watch();
 
 
@@ -6586,7 +6585,6 @@ CREATE EVENT TRIGGER pgrst_ddl_watch ON ddl_command_end
 -- Name: pgrst_drop_watch; Type: EVENT TRIGGER; Schema: -; Owner: -
 --
 
-CREATE EVENT TRIGGER pgrst_drop_watch ON sql_drop
    EXECUTE FUNCTION extensions.pgrst_drop_watch();
 
 
