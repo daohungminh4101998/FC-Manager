@@ -1,37 +1,45 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Save, Check, X, CheckCircle2 } from 'lucide-react';
-import { matchService } from '../services/matchService';
-import { playerService } from '../services/playerService';
-import { attendanceService } from '../services/attendanceService';
-import type { Match, Player, AttendanceRecord, AttendanceStatus } from '../types';
-import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
-import { VenueLink } from '../components/ui/VenueLink';
-import { useToast } from '../contexts/ToastContext';
-import { useAuth } from '../contexts/AuthContext';
-import dayjs from 'dayjs';
-import clsx from 'clsx';
+import React, { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Save, Check, X, CheckCircle2 } from "lucide-react";
+import { matchService } from "../services/matchService";
+import { playerService } from "../services/playerService";
+import { attendanceService } from "../services/attendanceService";
+import type {
+  Match,
+  Player,
+  AttendanceRecord,
+  AttendanceStatus,
+} from "../types";
+import { Button } from "../components/ui/Button";
+import { Badge } from "../components/ui/Badge";
+import { VenueLink } from "../components/ui/VenueLink";
+import { useToast } from "../contexts/ToastContext";
+import { useAuth } from "../contexts/AuthContext";
+import dayjs from "dayjs";
+import clsx from "clsx";
+import LineUpPage from "./LineUpPage";
 
-type PositionVariant = 'amber' | 'blue' | 'emerald' | 'red';
+type PositionVariant = "amber" | "blue" | "emerald" | "red";
 const positionBadge: Record<string, PositionVariant> = {
-  GK: 'amber',
-  DEF: 'blue',
-  MID: 'emerald',
-  FWD: 'red',
+  GK: "amber",
+  DEF: "blue",
+  MID: "emerald",
+  FWD: "red",
 };
 
 export const AttendancePage: React.FC = () => {
   const { addToast } = useToast();
   const { user } = useAuth();
-  const isAdmin = user?.role === 'Admin';
-  const isPlayer = user?.role === 'Player';
+  const isAdmin = user?.role === "Admin";
+  const isPlayer = user?.role === "Player";
   const canEdit = isAdmin || isPlayer;
   const [searchParams, setSearchParams] = useSearchParams();
   const [matches, setMatches] = useState<Match[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [selectedMatchId, setSelectedMatchId] = useState<string>('');
-  const [records, setRecords] = useState<Map<string, AttendanceStatus>>(new Map());
+  const [selectedMatchId, setSelectedMatchId] = useState<string>("");
+  const [records, setRecords] = useState<Map<string, AttendanceStatus>>(
+    new Map(),
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
 
@@ -43,12 +51,14 @@ export const AttendancePage: React.FC = () => {
     setMatches(ms);
     setPlayers(ps);
 
-    const matchIdFromUrl = searchParams.get('match');
-    const defaultMatchId = matchIdFromUrl || (ms.length > 0 ? ms[0].id : '');
+    const matchIdFromUrl = searchParams.get("match");
+    const defaultMatchId = matchIdFromUrl || (ms.length > 0 ? ms[0].id : "");
     setSelectedMatchId(defaultMatchId);
   }, [searchParams]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   useEffect(() => {
     if (!selectedMatchId) return;
@@ -89,26 +99,37 @@ export const AttendancePage: React.FC = () => {
     try {
       const recordList: AttendanceRecord[] = rosterPlayers.map((p) => ({
         playerId: p.id,
-        status: records.get(p.id) || 'absent',
+        status: records.get(p.id) || "absent",
       }));
       const saved = await attendanceService.save(selectedMatchId, recordList);
       setSavedAt(saved.savedAt);
-      addToast('Lưu điểm danh thành công!', 'success');
+      addToast("Lưu điểm danh thành công!", "success");
     } catch {
-      addToast('Lưu điểm danh thất bại!', 'error');
+      addToast("Lưu điểm danh thất bại!", "error");
     } finally {
       setIsSaving(false);
     }
   };
 
+  const presentPlayers = rosterPlayers.filter(
+    (p) => records.get(p.id) === "present",
+  );
+
   const selectedMatch = matches.find((m) => m.id === selectedMatchId);
-  const presentCount = [...records.values()].filter((s) => s === 'present').length;
-  const absentCount = [...records.values()].filter((s) => s === 'absent').length;
-  const visiblePlayers = isPlayer ? rosterPlayers.filter((p) => p.id === user?.playerId) : rosterPlayers;
+  const presentCount = [...records.values()].filter(
+    (s) => s === "present",
+  ).length;
+  const absentCount = [...records.values()].filter(
+    (s) => s === "absent",
+  ).length;
+  const visiblePlayers = isPlayer
+    ? rosterPlayers.filter((p) => p.id === user?.playerId)
+    : rosterPlayers;
 
   return (
     <div className="space-y-5">
       {/* Match Selector */}
+      <LineUpPage players={presentPlayers} />
       <div className="bg-gray-900/60 border border-white/10 rounded-2xl p-5">
         <label className="text-sm font-medium text-white/60 mb-2 block">
           Chọn trận đấu
@@ -125,7 +146,7 @@ export const AttendancePage: React.FC = () => {
         >
           {matches.map((m) => (
             <option key={m.id} value={m.id}>
-              vs {m.opponent} — {dayjs(m.date).format('DD/MM/YYYY')} — {m.venue}
+              vs {m.opponent} — {dayjs(m.date).format("DD/MM/YYYY")} — {m.venue}
             </option>
           ))}
         </select>
@@ -133,15 +154,19 @@ export const AttendancePage: React.FC = () => {
         {selectedMatch && (
           <div className="mt-3 flex flex-wrap gap-3">
             <span className="text-xs text-white/40">
-              📅 {dayjs(selectedMatch.date).format('dddd, DD/MM/YYYY')}
+              📅 {dayjs(selectedMatch.date).format("dddd, DD/MM/YYYY")}
             </span>
             <span className="text-xs text-white/40">
-              📍 <VenueLink venue={selectedMatch.venue} locationUrl={selectedMatch.locationUrl} />
+              📍{" "}
+              <VenueLink
+                venue={selectedMatch.venue}
+                locationUrl={selectedMatch.locationUrl}
+              />
             </span>
             {savedAt && (
               <span className="flex items-center gap-1 text-xs text-emerald-400">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                Đã lưu {dayjs(savedAt).format('HH:mm DD/MM')}
+                Đã lưu {dayjs(savedAt).format("HH:mm DD/MM")}
               </span>
             )}
           </div>
@@ -153,20 +178,32 @@ export const AttendancePage: React.FC = () => {
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
             <Check className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="text-sm text-emerald-400 font-medium">{presentCount} có mặt</span>
+            <span className="text-sm text-emerald-400 font-medium">
+              {presentCount} có mặt
+            </span>
           </div>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20">
             <X className="w-3.5 h-3.5 text-red-400" />
-            <span className="text-sm text-red-400 font-medium">{absentCount} vắng mặt</span>
+            <span className="text-sm text-red-400 font-medium">
+              {absentCount} vắng mặt
+            </span>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           {isAdmin && (
             <>
-              <Button size="sm" variant="secondary" onClick={() => markAll('present')}>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => markAll("present")}
+              >
                 Tất cả có mặt
               </Button>
-              <Button size="sm" variant="secondary" onClick={() => markAll('absent')}>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => markAll("absent")}
+              >
                 Tất cả vắng
               </Button>
             </>
@@ -188,40 +225,42 @@ export const AttendancePage: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {visiblePlayers.map((player) => {
           const status = records.get(player.id);
-          const isPresent = status === 'present';
-          const isAbsent = status === 'absent';
+          const isPresent = status === "present";
+          const isAbsent = status === "absent";
 
           return (
             <div
               key={player.id}
               className={clsx(
-                'flex items-center gap-3 sm:gap-4 p-4 rounded-xl border transition-all',
-                isPresent && 'bg-emerald-500/5 border-emerald-500/30',
-                isAbsent && 'bg-red-500/5 border-red-500/20',
-                !status && 'bg-gray-900/60 border-white/10'
+                "flex items-center gap-3 sm:gap-4 p-4 rounded-xl border transition-all",
+                isPresent && "bg-emerald-500/5 border-emerald-500/30",
+                isAbsent && "bg-red-500/5 border-red-500/20",
+                !status && "bg-gray-900/60 border-white/10",
               )}
             >
               <div
                 className={clsx(
-                  'w-10 h-10 rounded-xl flex items-center justify-center shrink-0',
-                  isPresent && 'bg-emerald-500/15',
-                  isAbsent && 'bg-red-500/10',
-                  !status && 'bg-white/5'
+                  "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+                  isPresent && "bg-emerald-500/15",
+                  isAbsent && "bg-red-500/10",
+                  !status && "bg-white/5",
                 )}
               >
                 <span
                   className={clsx(
-                    'text-sm font-bold',
-                    isPresent && 'text-emerald-400',
-                    isAbsent && 'text-red-400',
-                    !status && 'text-white/40'
+                    "text-sm font-bold",
+                    isPresent && "text-emerald-400",
+                    isAbsent && "text-red-400",
+                    !status && "text-white/40",
                   )}
                 >
                   #{player.jerseyNumber}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{player.name}</p>
+                <p className="text-sm font-medium text-white truncate">
+                  {player.name}
+                </p>
                 <Badge variant={positionBadge[player.position]} size="sm">
                   {player.position}
                 </Badge>
@@ -229,33 +268,40 @@ export const AttendancePage: React.FC = () => {
               {canEdit ? (
                 <div className="flex items-center gap-1.5 sm:gap-1.5 shrink-0">
                   <button
-                    onClick={() => toggle(player.id, 'present')}
+                    onClick={() => toggle(player.id, "present")}
                     title="Có mặt"
                     className={clsx(
-                      'w-11 h-11 sm:w-9 sm:h-9 rounded-lg border flex items-center justify-center transition-all',
+                      "w-11 h-11 sm:w-9 sm:h-9 rounded-lg border flex items-center justify-center transition-all",
                       isPresent
-                        ? 'bg-emerald-500 border-emerald-500 text-white'
-                        : 'border-white/10 text-white/30 hover:border-emerald-500/50 hover:text-emerald-400'
+                        ? "bg-emerald-500 border-emerald-500 text-white"
+                        : "border-white/10 text-white/30 hover:border-emerald-500/50 hover:text-emerald-400",
                     )}
                   >
                     <Check className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => toggle(player.id, 'absent')}
+                    onClick={() => toggle(player.id, "absent")}
                     title="Vắng mặt"
                     className={clsx(
-                      'w-11 h-11 sm:w-9 sm:h-9 rounded-lg border flex items-center justify-center transition-all',
+                      "w-11 h-11 sm:w-9 sm:h-9 rounded-lg border flex items-center justify-center transition-all",
                       isAbsent
-                        ? 'bg-red-500 border-red-500 text-white'
-                        : 'border-white/10 text-white/30 hover:border-red-500/50 hover:text-red-400'
+                        ? "bg-red-500 border-red-500 text-white"
+                        : "border-white/10 text-white/30 hover:border-red-500/50 hover:text-red-400",
                     )}
                   >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
               ) : (
-                <Badge variant={isPresent ? 'emerald' : isAbsent ? 'red' : 'gray'} size="sm">
-                  {isPresent ? 'Có mặt' : isAbsent ? 'Vắng mặt' : 'Chưa điểm danh'}
+                <Badge
+                  variant={isPresent ? "emerald" : isAbsent ? "red" : "gray"}
+                  size="sm"
+                >
+                  {isPresent
+                    ? "Có mặt"
+                    : isAbsent
+                      ? "Vắng mặt"
+                      : "Chưa điểm danh"}
                 </Badge>
               )}
             </div>

@@ -16,6 +16,8 @@
 //   { id: 'p12', name: 'Tô Thành Minh', jerseyNumber: 17, position: 'MID', phone: '0901234572', createdAt: dayjs().subtract(15, 'day').toISOString() },
 // ];
 
+import type { LineupPlayer } from "../types";
+
 // =====================
 // Mock Matches
 // =====================
@@ -83,3 +85,13 @@
 
 // Mock performance data removed — match_performances/goalkeeper_stats/match_defenders
 // are now backed by Supabase (see src/services/performanceService.ts).
+
+export const initialLineupPlayers: LineupPlayer[] = [
+  { id: "1", name: "Tiến Dũng", position: "GK", rating: 8.0, x: 10, y: 50 },
+  { id: "2", name: "Văn Toản", position: "MF", rating: 7.5, x: 25, y: 50 },
+  { id: "3", name: "Duy Mạnh", position: "DF", rating: 7.4, x: 25, y: 25 },
+  { id: "4", name: "Tuấn Anh", position: "MF", rating: 7.2, x: 25, y: 75 },
+  { id: "5", name: "Hồng Duy", position: "DF", rating: 7.1, x: 50, y: 75 },
+  { id: "6", name: "Đình Trọng", position: "DF", rating: 7.3, x: 85, y: 50 },
+  { id: "7", name: "Quang Hải", position: "FW", rating: 7.8, x: 50, y: 25 },
+];

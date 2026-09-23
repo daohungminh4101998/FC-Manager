@@ -163,3 +163,21 @@ export interface AuthUser {
 }
 
 export type RegisterPayload = { role: 'Player'; username: string; password: string; playerId: string };
+
+export type LineupPosition = "GK" | "DF" | "MF" | "FW";
+
+export interface LineupPlayer {
+  id: string;
+  name: string;
+  position: LineupPosition;
+  rating: number;
+  x: number; // % trên sân (0-100)
+  y: number;
+}
+
+export const LINEUP_POSITION_COLORS: Record<LineupPosition, string> = {
+  GK: "border-green-400 text-green-400",
+  DF: "border-blue-400 text-blue-400",
+  MF: "border-yellow-400 text-yellow-400",
+  FW: "border-red-400 text-red-400",
+};

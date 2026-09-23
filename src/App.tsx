@@ -15,6 +15,7 @@ import { PerformancePage } from "./pages/PerformancePage";
 import { ContributionsPage } from "./pages/ContributionsPage";
 import { ContributionDetailPage } from "./pages/ContributionDetailPage";
 import { ChatPage } from "./pages/ChatPage";
+import { LineUpPage } from "./pages/LineUpPage";
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
               <Route path="/matches" element={<MatchesPage />} />
               <Route path="/attendance" element={<AttendancePage />} />
               <Route path="/statistics" element={<StatisticsPage />} />
+              <Route path="/lineup" element={<LineUpPage />} />
               <Route
                 path="/performance"
                 element={
