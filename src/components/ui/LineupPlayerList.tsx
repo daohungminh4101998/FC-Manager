@@ -65,7 +65,7 @@ export default function LineupPlayerList({
   );
 
   return (
-    <div className="w-64 bg-slate-800 rounded-lg p-3 text-white">
+    <div className="bg-slate-800 rounded-lg p-3 text-white flex-1 w-full min-w-[240px]">
       <h2 className="font-bold mb-2">Danh sách cầu thủ ({players.length})</h2>
       <label className="block text-xs text-slate-300 font-medium mb-1">
         Sơ đồ

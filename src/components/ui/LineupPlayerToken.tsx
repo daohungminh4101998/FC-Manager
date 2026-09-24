@@ -88,19 +88,20 @@ export default function LineupPlayerToken({
       }}
     >
       <div
-        className={`w-20 h-20 rounded-full bg-slate-900 border-2 ${LINEUP_POSITION_COLORS[player.position]}
+        className={`w-10 h-10 md:w-15 md:h-15  rounded-full bg-slate-900 border-2 ${LINEUP_POSITION_COLORS[player.position]}
           flex items-center justify-center text-white text-sm font-bold overflow-hidden
           transition-shadow duration-200
           ${isDragging ? "shadow-2xl ring-4 ring-white/30" : "shadow-lg"}
           ${justSwapped ? "animate-swap-pulse" : ""}
         `}
       >
-        <img
+        {/* <img
           src={"https://i.pinimg.com/736x/8c/0a/bd/8c0abd182289dd49fa575b4673c3b037.jpg"}
           alt={player.name}
           className="w-full h-full rounded-full pointer-events-none"
           draggable={false}
-        />
+        /> */}
+        {player.name.charAt(0)?.toUpperCase()}
       </div>
       <span
         className={`mt-1 px-1.5 py-0.5 rounded bg-slate-900/80 text-white text-[10px] whitespace-nowrap
@@ -108,11 +109,11 @@ export default function LineupPlayerToken({
       >
         {player.name}
       </span>
-      <span
+      {/* <span
         className={`text-[10px] font-bold ${LINEUP_POSITION_COLORS[player.position].split(" ")[1]}`}
       >
         {player.rating.toFixed(1)}
-      </span>
+      </span> */}
     </div>
   );
 }

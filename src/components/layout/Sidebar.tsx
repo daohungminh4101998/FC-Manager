@@ -7,7 +7,6 @@ import {
   ClipboardList,
   BarChart3,
   Trophy,
-  UsersRound,
   ChevronLeft,
   ChevronRight,
   Zap,

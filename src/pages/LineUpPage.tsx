@@ -4,6 +4,7 @@ import { initialLineupPlayers } from "../data/mockData";
 import LineupPlayerList from "../components/ui/LineupPlayerList";
 import LineupPitch from "../components/ui/LineupPitch";
 import { applyFormation, getFormation } from "../utils/formation";
+import { ChevronDown } from "lucide-react";
 
 const lineupPositionMap: Record<Player["position"], LineupPlayer["position"]> =
   {
@@ -30,6 +31,7 @@ interface LineUpPageProps {
 export const LineUpPage: React.FC<LineUpPageProps> = ({ players }) => {
   const [lineupPlayers, setLineupPlayers] = useState<LineupPlayer[]>([]);
   const syncedKeyRef = useRef<string | null>(null);
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   useEffect(() => {
     const list =
@@ -86,34 +88,49 @@ export const LineUpPage: React.FC<LineUpPageProps> = ({ players }) => {
   return (
     <div className="space-y-5">
       <div className="bg-gray-900/60 border border-white/10 rounded-2xl p-5">
-        <h1 className="text-lg font-semibold text-white">Đội hình (LineUp)</h1>
-        <p className="text-sm text-white/50 mt-2">
-          Đội hình ({lineupPlayers.length} cầu thủ) — Rating TB:{" "}
-          {avgRating.toFixed(2)}
-        </p>
+        <button
+          type="button"
+          onClick={() => setIsCollapsed((prev) => !prev)}
+          className="flex items-center justify-between w-full"
+        >
+          <div className="text-left">
+            <h1 className="text-lg font-semibold text-white">
+              Đội hình (LineUp)
+            </h1>
+            <p className="text-sm text-white/50 mt-2">
+              Đội hình ({lineupPlayers.length} cầu thủ) — Rating TB:{" "}
+              {avgRating.toFixed(2)}
+            </p>
+          </div>
+          <ChevronDown
+            className={`w-5 h-5 text-white/50 transition-transform duration-200 shrink-0 ${isCollapsed && '-rotate-90'}`}
+          />
+        </button>
       </div>
 
-      <div className="flex gap-5 items-start">
-        <LineupPlayerList
-          onReorder={(player) => {
-            setLineupPlayers(player);
-          }}
-          players={lineupPlayers}
-          onRemove={handleRemove}
-          formation={formation}
-          onFormationChange={handleFormationChange}
-        />
-        <div className="flex-1">
-          <LineupPitch
-            players={lineupPlayers?.slice(0, 7)}
-            onMove={handleMove}
-            onSwap={handleSwap}
+      {!isCollapsed && (
+        <div className="flex flex-col md:flex-row gap-5 items-start">
+          <LineupPlayerList
+            onReorder={(player) => {
+              setLineupPlayers(player);
+            }}
+            players={lineupPlayers}
+            onRemove={handleRemove}
+            formation={formation}
+            onFormationChange={handleFormationChange}
           />
-          <p className="mt-2 text-xs text-white/40">
-            💡 Kéo thả cầu thủ để di chuyển vị trí
-          </p>
+          <div className="w-full">
+            <LineupPitch
+              players={lineupPlayers?.slice(0, 7)}
+              onMove={handleMove}
+              onSwap={handleSwap}
+            />
+            <p className="mt-2 text-xs text-white/40">
+              💡 Kéo thả cầu thủ để di chuyển vị trí
+            </p>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
